@@ -34,4 +34,13 @@ out/
 /.nb-gradle/
 
 ### VS Code ###
-.vscode/
+.vscode/ ㅇ
+
+# macOS
+.DS_Store
+
+# Eclipse / STS
+.metadata/
+
+# Log
+*.log
