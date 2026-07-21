@@ -9,4 +9,9 @@ public class homecontroller {
 	public String home() {
 		return "로그인 성공";
 	}
+	
+	@GetMapping("/test")
+	public String test() {
+	    return "JWT Success";
+	}
 }

@@ -32,7 +32,6 @@ public class UserServiceImpl implements UserService {
 		User user = User.builder()
 					.email(request.getEmail())
 					.password(encodedPassword)
-					.role("ROLE_USER")
 					.build();
 					
 		
@@ -41,7 +40,7 @@ public class UserServiceImpl implements UserService {
 		return new UserResponseDto(
 	            savedUser.getId(),
 	            savedUser.getEmail(),
-	            savedUser.getRole()
+	            savedUser.getRefreshToken()
 	    );
 	}
 	
