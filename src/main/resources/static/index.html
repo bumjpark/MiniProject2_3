@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Todo</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 40px 16px;
+            background: #f4f6f8;
+            font-family: Arial, sans-serif;
+            color: #222;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 760px;
+            margin: 0 auto;
+        }
+
+        .panel {
+            margin-bottom: 20px;
+            padding: 20px;
+            border-radius: 12px;
+            background: white;
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        h1 {
+            margin-top: 0;
+        }
+
+        .row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        input,
+        select,
+        button {
+            min-height: 42px;
+            padding: 9px 12px;
+            border: 1px solid #d6dbe1;
+            border-radius: 7px;
+            font-size: 14px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+        }
+
+        button {
+            cursor: pointer;
+            background: white;
+        }
+
+        button.primary {
+            border-color: #222;
+            background: #222;
+            color: white;
+        }
+
+        button.danger {
+            color: #c62828;
+        }
+
+        .todo-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+            padding: 14px;
+            border: 1px solid #e3e6ea;
+            border-radius: 9px;
+        }
+
+        .todo-body {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .todo-content {
+            margin-bottom: 5px;
+            font-weight: 600;
+            overflow-wrap: anywhere;
+        }
+
+        .todo-meta {
+            color: #666;
+            font-size: 13px;
+        }
+
+        .todo-item.completed .todo-content {
+            color: #888;
+            text-decoration: line-through;
+        }
+
+        .todo-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .todo-actions button {
+            min-height: 34px;
+            padding: 6px 9px;
+        }
+
+        .empty {
+            padding: 30px;
+            color: #777;
+            text-align: center;
+        }
+
+        .error {
+            display: none;
+            margin-bottom: 12px;
+            padding: 10px;
+            border-radius: 7px;
+            background: #ffebee;
+            color: #b71c1c;
+        }
+
+        @media (max-width: 600px) {
+            .row {
+                flex-direction: column;
+            }
+
+            .todo-item {
+                align-items: flex-start;
+            }
+
+            .todo-actions {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+
+    <div class="panel">
+        <h1>Todo</h1>
+
+        <div id="errorBox" class="error"></div>
+
+        <div class="row">
+            <input
+                id="userId"
+                type="number"
+                min="1"
+                value="1"
+                placeholder="사용자 ID"
+            >
+
+            <select id="filter">
+                <option value="">전체</option>
+                <option value="false" selected>미완료</option>
+                <option value="true">완료</option>
+            </select>
+
+            <button onclick="loadTodos()">
+                조회
+            </button>
+        </div>
+
+        <form id="todoForm">
+            <div class="row">
+                <input
+                    id="content"
+                    type="text"
+                    maxlength="255"
+                    placeholder="할 일을 입력하세요"
+                    required
+                >
+
+                <input
+                    id="deadline"
+                    type="date"
+                >
+
+                <button
+                    class="primary"
+                    type="submit"
+                >
+                    추가
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="panel">
+        <div id="todoList"></div>
+    </div>
+
+</div>
+
+<script>
+    const API_URL = "/api/todos";
+
+    let currentTodos = [];
+
+    document
+        .getElementById("todoForm")
+        .addEventListener("submit", createTodo);
+
+    document
+        .getElementById("filter")
+        .addEventListener("change", loadTodos);
+
+    async function loadTodos() {
+        clearError();
+
+        const userId = getUserId();
+        const completed =
+            document.getElementById("filter").value;
+
+        if (!userId) {
+            showError("사용자 ID를 입력하세요.");
+            return;
+        }
+
+        let url =
+            `${API_URL}?userId=${encodeURIComponent(userId)}`;
+
+        if (completed !== "") {
+            url +=
+                `&completed=${encodeURIComponent(completed)}`;
+        }
+
+        try {
+            const response = await fetch(url);
+
+            if (!response.ok) {
+                throw new Error("Todo 조회에 실패했습니다.");
+            }
+
+            currentTodos = await response.json();
+
+            renderTodos();
+        } catch (error) {
+            showError(error.message);
+        }
+    }
+
+    async function createTodo(event) {
+        event.preventDefault();
+        clearError();
+
+        const userId = getUserId();
+        const content =
+            document.getElementById("content")
+                .value
+                .trim();
+
+        const deadline =
+            document.getElementById("deadline").value;
+
+        if (!userId) {
+            showError("사용자 ID를 입력하세요.");
+            return;
+        }
+
+        if (!content) {
+            showError("할 일을 입력하세요.");
+            return;
+        }
+
+        try {
+            const response = await fetch(API_URL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    userId: userId,
+                    content: content,
+                    deadline: deadline || null
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(
+                    await getErrorMessage(
+                        response,
+                        "Todo 추가에 실패했습니다."
+                    )
+                );
+            }
+
+            document.getElementById("content").value = "";
+            document.getElementById("deadline").value = "";
+
+            await loadTodos();
+        } catch (error) {
+            showError(error.message);
+        }
+    }
+
+    async function toggleTodo(todoId, completed) {
+        clearError();
+
+        const userId = getUserId();
+
+        const url =
+            `${API_URL}/${todoId}/completed`
+            + `?userId=${encodeURIComponent(userId)}`
+            + `&completed=${encodeURIComponent(completed)}`;
+
+        try {
+            const response = await fetch(url, {
+                method: "PATCH"
+            });
+
+            if (!response.ok) {
+                throw new Error(
+                    "완료 상태 변경에 실패했습니다."
+                );
+            }
+
+            await loadTodos();
+        } catch (error) {
+            showError(error.message);
+            await loadTodos();
+        }
+    }
+
+    async function editTodo(todoId) {
+        clearError();
+
+        const todo = currentTodos.find(
+            item => item.todoId === todoId
+        );
+
+        if (!todo) {
+            return;
+        }
+
+        const content = prompt(
+            "수정할 내용을 입력하세요.",
+            todo.content
+        );
+
+        if (content === null) {
+            return;
+        }
+
+        if (!content.trim()) {
+            showError("내용은 비워둘 수 없습니다.");
+            return;
+        }
+
+        const deadline = prompt(
+            "마감일을 YYYY-MM-DD 형식으로 입력하세요."
+            + "\n마감일을 없애려면 빈칸으로 두세요.",
+            todo.deadline || ""
+        );
+
+        if (deadline === null) {
+            return;
+        }
+
+        const userId = getUserId();
+
+        try {
+            const response = await fetch(
+                `${API_URL}/${todoId}`
+                + `?userId=${encodeURIComponent(userId)}`,
+                {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        content: content.trim(),
+                        deadline: deadline.trim() || null
+                    })
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(
+                    await getErrorMessage(
+                        response,
+                        "Todo 수정에 실패했습니다."
+                    )
+                );
+            }
+
+            await loadTodos();
+        } catch (error) {
+            showError(error.message);
+        }
+    }
+
+    async function deleteTodo(todoId) {
+        clearError();
+
+        if (!confirm("이 Todo를 삭제하시겠습니까?")) {
+            return;
+        }
+
+        const userId = getUserId();
+
+        try {
+            const response = await fetch(
+                `${API_URL}/${todoId}`
+                + `?userId=${encodeURIComponent(userId)}`,
+                {
+                    method: "DELETE"
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(
+                    "Todo 삭제에 실패했습니다."
+                );
+            }
+
+            await loadTodos();
+        } catch (error) {
+            showError(error.message);
+        }
+    }
+
+    function renderTodos() {
+        const todoList =
+            document.getElementById("todoList");
+
+        if (currentTodos.length === 0) {
+            todoList.innerHTML =
+                `<div class="empty">
+                    표시할 Todo가 없습니다.
+                </div>`;
+
+            return;
+        }
+
+        todoList.innerHTML = currentTodos
+            .map(todo => {
+                const completedClass =
+                    todo.completed ? "completed" : "";
+
+                return `
+                    <div class="todo-item ${completedClass}">
+                        <input
+                            type="checkbox"
+                            ${todo.completed ? "checked" : ""}
+                            onchange="
+                                toggleTodo(
+                                    ${todo.todoId},
+                                    this.checked
+                                )
+                            "
+                        >
+
+                        <div class="todo-body">
+                            <div class="todo-content">
+                                ${escapeHtml(todo.content)}
+                            </div>
+
+                            <div class="todo-meta">
+                                ${getDeadlineText(todo)}
+                            </div>
+                        </div>
+
+                        <div class="todo-actions">
+                            <button
+                                onclick="editTodo(${todo.todoId})"
+                            >
+                                수정
+                            </button>
+
+                            <button
+                                class="danger"
+                                onclick="deleteTodo(${todo.todoId})"
+                            >
+                                삭제
+                            </button>
+                        </div>
+                    </div>
+                `;
+            })
+            .join("");
+    }
+
+    function getDeadlineText(todo) {
+        if (!todo.deadline) {
+            return "마감일 없음";
+        }
+
+        if (todo.remainingDays < 0) {
+            return `${todo.deadline} · `
+                + `${Math.abs(todo.remainingDays)}일 지남`;
+        }
+
+        if (todo.remainingDays === 0) {
+            return `${todo.deadline} · 오늘 마감`;
+        }
+
+        return `${todo.deadline} · D-${todo.remainingDays}`;
+    }
+
+    function getUserId() {
+        const value =
+            document.getElementById("userId").value;
+
+        if (!value) {
+            return null;
+        }
+
+        return Number(value);
+    }
+
+    function escapeHtml(value) {
+        return String(value)
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+    }
+
+    async function getErrorMessage(
+        response,
+        defaultMessage
+    ) {
+        try {
+            const body = await response.json();
+
+            return body.detail
+                || body.message
+                || defaultMessage;
+        } catch {
+            return defaultMessage;
+        }
+    }
+
+    function showError(message) {
+        const errorBox =
+            document.getElementById("errorBox");
+
+        errorBox.textContent = message;
+        errorBox.style.display = "block";
+    }
+
+    function clearError() {
+        const errorBox =
+            document.getElementById("errorBox");
+
+        errorBox.textContent = "";
+        errorBox.style.display = "none";
+    }
+
+    loadTodos();
+</script>
+</body>
