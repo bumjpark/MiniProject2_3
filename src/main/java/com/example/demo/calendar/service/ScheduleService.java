@@ -8,7 +8,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -36,16 +35,15 @@ public class ScheduleService {
                 .title(request.getTitle())
                 .startDateTime(start)
                 .endDateTime(end)
-                .participants(request.getParticipants() != null ? request.getParticipants() : new ArrayList<>())
                 .label(request.getLabel())
                 .build();
 
         return scheduleRepository.save(schedule);
     }
 
-    public Schedule getById(Long calendarId, Long id) {
-        Schedule schedule = scheduleRepository.findById(id)
-                .orElseThrow(() -> new NoSuchElementException("일정을 찾을 수 없습니다. id=" + id));
+    public Schedule getById(Long calendarId, Long scheduleId) {
+        Schedule schedule = scheduleRepository.findById(scheduleId)
+                .orElseThrow(() -> new NoSuchElementException("일정을 찾을 수 없습니다. scheduleId=" + scheduleId));
         validateBelongsToCalendar(schedule, calendarId);
         return schedule;
     }
@@ -55,8 +53,8 @@ public class ScheduleService {
         return scheduleRepository.findByCalendarId(calendarId);
     }
 
-    public Schedule update(Long calendarId, Long id, ScheduleRequest request) {
-        Schedule schedule = getById(calendarId, id);
+    public Schedule update(Long calendarId, Long scheduleId, ScheduleRequest request) {
+        Schedule schedule = getById(calendarId, scheduleId);
         requireTitle(request);
 
         schedule.setTitle(request.getTitle());
@@ -66,9 +64,6 @@ public class ScheduleService {
         if (request.getEndDateTime() != null) {
             schedule.setEndDateTime(request.getEndDateTime());
         }
-        if (request.getParticipants() != null) {
-            schedule.setParticipants(request.getParticipants());
-        }
         if (request.getLabel() != null) {
             schedule.setLabel(request.getLabel());
         }
@@ -76,9 +71,9 @@ public class ScheduleService {
         return scheduleRepository.save(schedule);
     }
 
-    public void delete(Long calendarId, Long id) {
-        Schedule schedule = getById(calendarId, id);
-        scheduleRepository.deleteById(schedule.getId());
+    public void delete(Long calendarId, Long scheduleId) {
+        Schedule schedule = getById(calendarId, scheduleId);
+        scheduleRepository.deleteById(schedule.getScheduleId());
     }
 
     private void requireTitle(ScheduleRequest request) {
@@ -89,7 +84,7 @@ public class ScheduleService {
 
     private void validateBelongsToCalendar(Schedule schedule, Long calendarId) {
         if (!schedule.getCalendarId().equals(calendarId)) {
-            throw new NoSuchElementException("해당 캘린더에서 일정을 찾을 수 없습니다. id=" + schedule.getId());
+            throw new NoSuchElementException("해당 캘린더에서 일정을 찾을 수 없습니다. scheduleId=" + schedule.getScheduleId());
         }
     }
 }
