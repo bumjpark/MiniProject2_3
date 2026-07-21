@@ -41,7 +41,11 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/users/**",
                 				 "/login",
-                				 "/error").permitAll() 
+                				 "/error",
+                				 "/api/calendars/**",
+                				 "/swagger-ui/**",
+                				 "/swagger-ui.html",
+                				 "/v3/api-docs/**").permitAll()
                 .anyRequest().authenticated()
             )
         	.addFilterBefore(jwtFilter,
