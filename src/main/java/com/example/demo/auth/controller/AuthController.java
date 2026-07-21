@@ -5,6 +5,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.demo.auth.dto.LoginRequestDto;
@@ -19,39 +20,35 @@ import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequiredArgsConstructor
+@RequestMapping("/users")
 public class AuthController {
 
-    private final AuthenticationManager authenticationManager;
-    private final JwtUtil jwtUtil;
-    private final UserRepository userRepository;
+        private final AuthenticationManager authenticationManager;
+        private final JwtUtil jwtUtil;
+        private final UserRepository userRepository;
 
-    @PostMapping("/login")
-    public LoginResponseDto login(@RequestBody LoginRequestDto request) {
+        @PostMapping("/login")
+        public LoginResponseDto login(@RequestBody LoginRequestDto request) {
 
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.getEmail(),
-                        request.getPassword()
-                )
-        );
+                Authentication authentication = authenticationManager.authenticate(
+                                new UsernamePasswordAuthenticationToken(
+                                                request.getEmail(),
+                                                request.getPassword()));
 
-        CustomUserDetails userDetails =
-                (CustomUserDetails) authentication.getPrincipal();
+                CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
 
-        String token = jwtUtil.createAccessToken(
-                userDetails.getUsername()
-        );
-        String refreshToken = jwtUtil.createRefreshToken(
-                userDetails.getUsername()
-        );
+                String token = jwtUtil.createAccessToken(
+                                userDetails.getUsername());
+                String refreshToken = jwtUtil.createRefreshToken(
+                                userDetails.getUsername());
 
-        Optional<User> userOptional = userRepository.findByEmail(userDetails.getUsername());
-        if (userOptional.isPresent()) {
-            User user = userOptional.get();
-            user.setRefreshToken(refreshToken);
-            userRepository.save(user);
+                Optional<User> userOptional = userRepository.findByEmail(userDetails.getUsername());
+                if (userOptional.isPresent()) {
+                        User user = userOptional.get();
+                        user.setRefreshToken(refreshToken);
+                        userRepository.save(user);
+                }
+
+                return new LoginResponseDto(token, refreshToken);
         }
-
-        return new LoginResponseDto(token, refreshToken);
-    }
 }

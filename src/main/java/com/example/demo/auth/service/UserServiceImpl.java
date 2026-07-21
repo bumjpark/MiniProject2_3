@@ -32,13 +32,15 @@ public class UserServiceImpl implements UserService {
 		User user = User.builder()
 				.email(request.getEmail())
 				.password(encodedPassword)
+				.name(request.getName())
 				.build();
 
 		User savedUser = userRepository.save(user);
 
 		return new UserResponseDto(
 				savedUser.getId(),
-				savedUser.getEmail());
+				savedUser.getEmail(),
+				savedUser.getName());
 	}
 
 }
