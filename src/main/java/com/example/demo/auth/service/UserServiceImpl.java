@@ -15,34 +15,32 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
-	
+
 	private final UserRepository userRepository;
 	private final PasswordEncoder passwordEncoder;
-	
+
 	@Override
 	public UserResponseDto signup(SignupRequestDto request) {
-		//중복 체크
-		if(userRepository.findByEmail(request.getEmail()).isPresent()) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"이미 존재하는 사용자입니다.");
+		// 중복 체크
+		if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "이미 존재하는 사용자입니다.");
 		}
-		
-		//비밀번호 암호화
+
+		// 비밀번호 암호화
 		String encodedPassword = passwordEncoder.encode(request.getPassword());
-		
+
 		User user = User.builder()
-					.email(request.getEmail())
-					.password(encodedPassword)
-					.role("ROLE_USER")
-					.build();
-					
-		
+				.email(request.getEmail())
+				.password(encodedPassword)
+				.name(request.getName())
+				.build();
+
 		User savedUser = userRepository.save(user);
-		
+
 		return new UserResponseDto(
-	            savedUser.getId(),
-	            savedUser.getEmail(),
-	            savedUser.getRole()
-	    );
+				savedUser.getId(),
+				savedUser.getEmail(),
+				savedUser.getName());
 	}
-	
+
 }
