@@ -7,6 +7,7 @@ import com.example.demo.calendar.service.ScheduleService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -34,7 +35,7 @@ public class ScheduleController {
     @Operation(summary = "일정 생성", description = "제목은 필수이며, 시작/종료 시간을 생략하면 현재 시간을 기준으로 1시간 단위 디폴트가 적용된다.")
     @PostMapping
     public ResponseEntity<ScheduleResponse> createSchedule(@PathVariable("calendarId") Long calendarId,
-                                                             @RequestBody ScheduleRequest request) {
+                                                             @Valid @RequestBody ScheduleRequest request) {
         Schedule schedule = scheduleService.create(calendarId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ScheduleResponse.from(schedule));
     }
@@ -62,7 +63,7 @@ public class ScheduleController {
     @PutMapping("/{scheduleId}")
     public ResponseEntity<ScheduleResponse> updateSchedule(@PathVariable("calendarId") Long calendarId,
                                                              @PathVariable("scheduleId") Long scheduleId,
-                                                             @RequestBody ScheduleRequest request) {
+                                                             @Valid @RequestBody ScheduleRequest request) {
         Schedule schedule = scheduleService.update(calendarId, scheduleId, request);
         return ResponseEntity.ok(ScheduleResponse.from(schedule));
     }

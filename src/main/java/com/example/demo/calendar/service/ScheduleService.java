@@ -21,7 +21,6 @@ public class ScheduleService {
 
     public Schedule create(Long calendarId, ScheduleRequest request) {
         calendarService.getById(calendarId);
-        requireTitle(request);
 
         LocalDateTime start = request.getStartDateTime() != null
                 ? request.getStartDateTime()
@@ -56,7 +55,6 @@ public class ScheduleService {
 
     public Schedule update(Long calendarId, Long scheduleId, ScheduleRequest request) {
         Schedule schedule = getById(calendarId, scheduleId);
-        requireTitle(request);
 
         schedule.setTitle(request.getTitle());
         if (request.getStartDateTime() != null) {
@@ -75,12 +73,6 @@ public class ScheduleService {
     public void delete(Long calendarId, Long scheduleId) {
         Schedule schedule = getById(calendarId, scheduleId);
         scheduleRepository.deleteById(schedule.getScheduleId());
-    }
-
-    private void requireTitle(ScheduleRequest request) {
-        if (request.getTitle() == null || request.getTitle().isBlank()) {
-            throw new IllegalArgumentException("제목은 필수입니다.");
-        }
     }
 
     private void validateBelongsToCalendar(Schedule schedule, Long calendarId) {
