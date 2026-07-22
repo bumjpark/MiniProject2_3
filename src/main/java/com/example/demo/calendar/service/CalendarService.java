@@ -6,6 +6,7 @@ import com.example.demo.calendar.entity.Calendar;
 import com.example.demo.calendar.repository.CalendarRepository;
 import com.example.demo.calendar.repository.ScheduleRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,32 +22,50 @@ public class CalendarService {
     private final CalendarRepository calendarRepository;
     private final UserRepository userRepository;
     private final ScheduleRepository scheduleRepository;
+    private final CurrentUserResolver currentUserResolver;
 
     public Calendar create(String name, List<Long> memberIds) {
+        List<User> members = resolveMembers(memberIds);
+
+        Long creatorId = currentUserResolver.getCurrentUserId();
+        boolean creatorIncluded = members.stream()
+                .anyMatch(member -> member.getId().equals(creatorId));
+        if (!creatorIncluded) {
+            User creator = userRepository.findById(creatorId)
+                    .orElseThrow(() -> new NoSuchElementException("사용자를 찾을 수 없습니다. id=" + creatorId));
+            members.add(creator);
+        }
+
         Calendar calendar = Calendar.builder()
                 .name(name)
-                .members(resolveMembers(memberIds))
+                .members(members)
                 .build();
         return calendarRepository.save(calendar);
     }
 
+    // calendarId로 캘린더를 조회하면서, 현재 로그인한 사용자가 그 캘린더의 멤버인지도 함께 검증한다.
     public Calendar getById(Long calendarId) {
-        return calendarRepository.findById(calendarId)
+        Calendar calendar = calendarRepository.findById(calendarId)
                 .orElseThrow(() -> new NoSuchElementException("캘린더를 찾을 수 없습니다. calendarId=" + calendarId));
+
+        Long currentUserId = currentUserResolver.getCurrentUserId();
+        boolean isMember = calendar.getMembers().stream()
+                .anyMatch(member -> member.getId().equals(currentUserId));
+        if (!isMember) {
+            throw new AccessDeniedException("이 캘린더에 접근 권한이 없습니다. calendarId=" + calendarId);
+        }
+        return calendar;
     }
 
+    // 내가 멤버로 속한 캘린더만 조회한다.
     public List<Calendar> getAll() {
-        return calendarRepository.findAll();
+        Long currentUserId = currentUserResolver.getCurrentUserId();
+        return calendarRepository.findByMembers_Id(currentUserId);
     }
 
-    public Calendar update(Long calendarId, String name, List<Long> memberIds) {
+    public Calendar update(Long calendarId, String name) {
         Calendar calendar = getById(calendarId);
-        if (name != null) {
-            calendar.setName(name);
-        }
-        if (memberIds != null) {
-            calendar.setMembers(resolveMembers(memberIds));
-        }
+        calendar.setName(name);
         return calendarRepository.save(calendar);
     }
 
@@ -80,9 +99,12 @@ public class CalendarService {
         if (memberIds == null) {
             return new ArrayList<>();
         }
-        return memberIds.stream()
-                .map(userId -> userRepository.findById(userId)
-                        .orElseThrow(() -> new NoSuchElementException("사용자를 찾을 수 없습니다. id=" + userId)))
-                .toList();
+        List<User> members = new ArrayList<>();
+        for (Long userId : memberIds) {
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new NoSuchElementException("사용자를 찾을 수 없습니다. id=" + userId));
+            members.add(user);
+        }
+        return members;
     }
 }
