@@ -21,6 +21,7 @@ import com.example.demo.calendar.service.CalendarService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @Tag(name = "Calendar", description = "공유 캘린더 CRUD API")
@@ -35,7 +36,7 @@ public class CalendarController {
     // 캘린더 생성 (생성자는 자동으로 멤버가 됨)
     @Operation(summary = "캘린더 생성", description = "이름과 초대 멤버 목록으로 공유 캘린더를 생성한다. 생성자는 자동으로 멤버로 등록된다.")
     @PostMapping
-    public ResponseEntity<CalendarResponse> createCalendar(@RequestBody CalendarRequest request) {
+    public ResponseEntity<CalendarResponse> createCalendar(@Valid @RequestBody CalendarRequest request) {
         Calendar calendar = calendarService.create(request.getName(), request.getMemberIds());
         return ResponseEntity.status(HttpStatus.CREATED).body(CalendarResponse.from(calendar));
     }
@@ -60,7 +61,7 @@ public class CalendarController {
     // 캘린더 이름/멤버 수정
     @Operation(summary = "캘린더 수정", description = "캘린더 이름 또는 초대 멤버 목록을 수정한다.")
     @PutMapping("/{calendarId}")
-    public ResponseEntity<CalendarResponse> updateCalendar(@PathVariable("calendarId") Long calendarId,
+    public ResponseEntity<CalendarResponse> updateCalendar(@Valid @PathVariable("calendarId") Long calendarId,
             @RequestBody CalendarRequest request) {
         Calendar calendar = calendarService.update(calendarId, request.getName(), request.getMemberIds());
         return ResponseEntity.ok(CalendarResponse.from(calendar));
