@@ -59,7 +59,7 @@ public class CalendarController {
     @Operation(summary = "캘린더 수정", description = "캘린더 이름 또는 초대 멤버 목록을 수정한다.")
     @PutMapping("/{calendarId}")
     public ResponseEntity<CalendarResponse> updateCalendar(@PathVariable("calendarId") Long calendarId,
-                                                             @RequestBody CalendarRequest request) {
+            @RequestBody CalendarRequest request) {
         Calendar calendar = calendarService.update(calendarId, request.getName(), request.getMemberIds());
         return ResponseEntity.ok(CalendarResponse.from(calendar));
     }
@@ -76,7 +76,7 @@ public class CalendarController {
     @Operation(summary = "캘린더 멤버 추가", description = "캘린더에 유저를 멤버로 초대한다.")
     @PostMapping("/{calendarId}/members/{userId}")
     public ResponseEntity<CalendarResponse> addMember(@PathVariable("calendarId") Long calendarId,
-                                                        @PathVariable("userId") Long userId) {
+            @PathVariable("userId") Long userId) {
         Calendar calendar = calendarService.addMember(calendarId, userId);
         return ResponseEntity.ok(CalendarResponse.from(calendar));
     }
@@ -85,7 +85,7 @@ public class CalendarController {
     @Operation(summary = "캘린더 멤버 제거", description = "캘린더 멤버 목록에서 유저를 제거한다.")
     @DeleteMapping("/{calendarId}/members/{userId}")
     public ResponseEntity<CalendarResponse> removeMember(@PathVariable("calendarId") Long calendarId,
-                                                           @PathVariable("userId") Long userId) {
+            @PathVariable("userId") Long userId) {
         Calendar calendar = calendarService.removeMember(calendarId, userId);
         return ResponseEntity.ok(CalendarResponse.from(calendar));
     }

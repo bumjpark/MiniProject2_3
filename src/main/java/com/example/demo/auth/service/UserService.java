@@ -5,4 +5,5 @@ import com.example.demo.auth.dto.UserResponseDto;
 
 public interface UserService {
 	UserResponseDto signup(SignupRequestDto request);
+	void logout(String email);
 }
