@@ -33,6 +33,10 @@ public class Todo {
     @JoinColumn(name = "list_id")
     private TodoList todoList;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private Category category;
+
     @Column(name = "deadline")
     private LocalDate deadline;
 
@@ -45,11 +49,13 @@ public class Todo {
     public Todo(
             Long userId,
             TodoList todoList,
+            Category category,
             String content,
             LocalDate deadline
     ) {
         this.userId = userId;
         this.todoList = todoList;
+        this.category = category;
         this.content = content;
         this.deadline = deadline;
         this.completed = false;
@@ -69,5 +75,9 @@ public class Todo {
 
     public void moveTo(TodoList todoList) {
         this.todoList = todoList;
+    }
+
+    public void changeCategory(Category category) {
+        this.category = category;
     }
 }

@@ -1,9 +1,15 @@
 package com.example.demo.todo.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
+@Schema(description = "TodoList 응답")
 public class TodoListDto {
 
+    @Schema(description = "TodoList ID", example = "1")
     private Long listId;
+    @Schema(description = "사용자 ID", example = "1")
     private Long userId;
+    @Schema(description = "목록 이름", example = "업무")
     private String listName;
 
     public TodoListDto() {

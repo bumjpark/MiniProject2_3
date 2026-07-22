@@ -10,8 +10,10 @@ import org.springframework.web.server.ResponseStatusException;
 import com.example.demo.todo.dto.TodoCreateRequest;
 import com.example.demo.todo.dto.TodoResponse;
 import com.example.demo.todo.dto.TodoUpdateRequest;
+import com.example.demo.todo.entity.Category;
 import com.example.demo.todo.entity.Todo;
 import com.example.demo.todo.entity.TodoList;
+import com.example.demo.todo.repository.CategoryRepository;
 import com.example.demo.todo.repository.TodoListRepository;
 import com.example.demo.todo.repository.TodoRepository;
 
@@ -24,12 +26,13 @@ public class TodoService {
 
     private final TodoRepository todoRepository;
     private final TodoListRepository todoListRepository;
+    private final CategoryRepository categoryRepository;
 
     public List<TodoResponse> getTodos(
             Long userId,
             Boolean completed
     ) {
-        return getTodos(userId, completed, null);
+        return getTodos(userId, completed, null, null);
     }
 
     public List<TodoResponse> getTodos(
@@ -37,13 +40,31 @@ public class TodoService {
             Boolean completed,
             Long listId
     ) {
+        return getTodos(userId, completed, listId, null);
+    }
+
+    public List<TodoResponse> getTodos(
+            Long userId,
+            Boolean completed,
+            Long listId,
+            Long categoryId
+    ) {
         validateUserId(userId);
 
         if (listId != null) {
             findTodoList(listId, userId);
         }
 
-        return todoRepository.findTodos(userId, completed, listId)
+        if (categoryId != null) {
+            findCategory(categoryId);
+        }
+
+        return todoRepository.findTodos(
+                        userId,
+                        completed,
+                        listId,
+                        categoryId
+                )
                 .stream()
                 .map(TodoResponse::from)
                 .toList();
@@ -65,10 +86,14 @@ public class TodoService {
         TodoList todoList = request.listId() == null
                 ? null
                 : findTodoList(request.listId(), request.userId());
+        Category category = request.categoryId() == null
+                ? null
+                : findCategory(request.categoryId());
 
         Todo todo = new Todo(
                 request.userId(),
                 todoList,
+                category,
                 request.content().trim(),
                 request.deadline()
         );
@@ -101,6 +126,10 @@ public class TodoService {
             todo.moveTo(findTodoList(request.listId(), userId));
         }
 
+        if (request.categoryId() != null) {
+            todo.changeCategory(findCategory(request.categoryId()));
+        }
+
         todo.update(
                 request.content().trim(),
                 request.deadline()
@@ -120,6 +149,23 @@ public class TodoService {
 
         todo.changeCompleted(completed);
 
+        return TodoResponse.from(todo);
+    }
+
+    @Transactional
+    public TodoResponse changeCategory(
+            Long todoId,
+            Long userId,
+            Long categoryId
+    ) {
+        validateUserId(userId);
+
+        Todo todo = findTodo(todoId, userId);
+        Category category = categoryId == null
+                ? null
+                : findCategory(categoryId);
+
+        todo.changeCategory(category);
         return TodoResponse.from(todo);
     }
 
@@ -170,6 +216,22 @@ public class TodoService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "해당 사용자의 Todo 목록을 찾을 수 없습니다."
+                ));
+    }
+
+    private Category findCategory(Long categoryId) {
+        if (categoryId == null || categoryId <= 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "올바른 카테고리 ID를 입력하세요."
+            );
+        }
+
+        return categoryRepository
+                .findById(categoryId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "카테고리를 찾을 수 없습니다."
                 ));
     }
 

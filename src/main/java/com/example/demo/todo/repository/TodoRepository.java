@@ -16,9 +16,11 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
             SELECT t
             FROM Todo t
             LEFT JOIN FETCH t.todoList l
+            LEFT JOIN FETCH t.category c
             WHERE t.userId = :userId
               AND (:completed IS NULL OR t.completed = :completed)
               AND (:listId IS NULL OR l.listId = :listId)
+              AND (:categoryId IS NULL OR c.categoryId = :categoryId)
             ORDER BY
               CASE WHEN t.completed = false THEN 0 ELSE 1 END,
               CASE WHEN t.deadline IS NULL THEN 1 ELSE 0 END,
@@ -28,7 +30,8 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
     List<Todo> findTodos(
             @Param("userId") Long userId,
             @Param("completed") Boolean completed,
-            @Param("listId") Long listId
+            @Param("listId") Long listId,
+            @Param("categoryId") Long categoryId
     );
 
     Optional<Todo> findByTodoIdAndUserId(
