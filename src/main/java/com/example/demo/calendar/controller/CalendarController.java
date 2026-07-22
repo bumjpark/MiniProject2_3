@@ -19,27 +19,29 @@ import com.example.demo.calendar.entity.Calendar;
 import com.example.demo.calendar.service.CalendarService;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
 @Tag(name = "Calendar", description = "공유 캘린더 CRUD API")
+@SecurityRequirement(name = "bearerAuth")
 @RestController
-@RequestMapping("/api/calendars")
+@RequestMapping("/calendars")
 @RequiredArgsConstructor
 public class CalendarController {
 
     private final CalendarService calendarService;
 
-    // 캘린더 생성
-    @Operation(summary = "캘린더 생성", description = "이름과 초대 멤버 목록으로 공유 캘린더를 생성한다.")
+    // 캘린더 생성 (생성자는 자동으로 멤버가 됨)
+    @Operation(summary = "캘린더 생성", description = "이름과 초대 멤버 목록으로 공유 캘린더를 생성한다. 생성자는 자동으로 멤버로 등록된다.")
     @PostMapping
     public ResponseEntity<CalendarResponse> createCalendar(@RequestBody CalendarRequest request) {
         Calendar calendar = calendarService.create(request.getName(), request.getMemberIds());
         return ResponseEntity.status(HttpStatus.CREATED).body(CalendarResponse.from(calendar));
     }
 
-    // 캘린더 전체 조회
-    @Operation(summary = "캘린더 전체 조회", description = "생성된 모든 캘린더 목록을 조회한다.")
+    // 캘린더 전체 조회 (내가 속한 캘린더만)
+    @Operation(summary = "내 캘린더 전체 조회", description = "내가 멤버로 속한 캘린더 목록을 조회한다.")
     @GetMapping
     public ResponseEntity<List<CalendarResponse>> getCalendars() {
         List<CalendarResponse> responses = calendarService.getAll().stream()
