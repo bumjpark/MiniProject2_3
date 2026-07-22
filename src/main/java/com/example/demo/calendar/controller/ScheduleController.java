@@ -5,6 +5,7 @@ import com.example.demo.calendar.dto.ScheduleResponse;
 import com.example.demo.calendar.entity.Schedule;
 import com.example.demo.calendar.service.ScheduleService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -21,8 +22,9 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @Tag(name = "Schedule", description = "캘린더 일정 CRUD API")
+@SecurityRequirement(name = "bearerAuth")
 @RestController
-@RequestMapping("/api/calendars/{calendarId}/schedules")
+@RequestMapping("/calendars/{calendarId}/schedules")
 @RequiredArgsConstructor
 public class ScheduleController {
 

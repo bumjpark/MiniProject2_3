@@ -42,6 +42,7 @@ public class ScheduleService {
     }
 
     public Schedule getById(Long calendarId, Long scheduleId) {
+        calendarService.getById(calendarId);
         Schedule schedule = scheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new NoSuchElementException("일정을 찾을 수 없습니다. scheduleId=" + scheduleId));
         validateBelongsToCalendar(schedule, calendarId);
