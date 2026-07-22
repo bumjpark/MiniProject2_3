@@ -28,6 +28,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -75,7 +76,7 @@ public class TodoController {
     public ResponseEntity<TodoResponse> createTodo(
             @Parameter(hidden = true)
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestBody TodoCreateRequest request
+            @Valid @RequestBody TodoCreateRequest request
     ) {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
@@ -100,7 +101,7 @@ public class TodoController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Parameter(description = "Todo ID", example = "1")
             @PathVariable(name = "todoId") Long todoId,
-            @RequestBody TodoUpdateRequest request
+            @Valid @RequestBody TodoUpdateRequest request
     ) {
         return ResponseEntity.ok(
                 todoService.updateTodo(

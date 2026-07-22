@@ -19,6 +19,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -48,7 +49,7 @@ public class CategoryController {
             @ApiResponse(responseCode = "409", description = "동일한 이름의 카테고리 존재")
     })
     public ResponseEntity<CategoryResponse> createCategory(
-            @RequestBody CategoryCreateRequest request
+            @Valid @RequestBody CategoryCreateRequest request
     ) {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
