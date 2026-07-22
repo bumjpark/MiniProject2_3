@@ -63,14 +63,9 @@ public class CalendarService {
         return calendarRepository.findByMembers_Id(currentUserId);
     }
 
-    public Calendar update(Long calendarId, String name, List<Long> memberIds) {
+    public Calendar update(Long calendarId, String name) {
         Calendar calendar = getById(calendarId);
-        if (name != null) {
-            calendar.setName(name);
-        }
-        if (memberIds != null) {
-            calendar.setMembers(resolveMembers(memberIds));
-        }
+        calendar.setName(name);
         return calendarRepository.save(calendar);
     }
 
