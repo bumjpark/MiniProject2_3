@@ -58,12 +58,12 @@ public class CalendarController {
         return ResponseEntity.ok(CalendarResponse.from(calendarService.getById(calendarId)));
     }
 
-    // 캘린더 이름/멤버 수정
-    @Operation(summary = "캘린더 수정", description = "캘린더 이름 또는 초대 멤버 목록을 수정한다.")
+    // 캘린더 이름 수정
+    @Operation(summary = "캘린더 수정", description = "캘린더 이름을 수정한다.")
     @PutMapping("/{calendarId}")
-    public ResponseEntity<CalendarResponse> updateCalendar(@Valid @PathVariable("calendarId") Long calendarId,
-            @RequestBody CalendarRequest request) {
-        Calendar calendar = calendarService.update(calendarId, request.getName(), request.getMemberIds());
+    public ResponseEntity<CalendarResponse> updateCalendar(@PathVariable("calendarId") Long calendarId,
+            @Valid @RequestBody CalendarRequest request) {
+        Calendar calendar = calendarService.update(calendarId, request.getName());
         return ResponseEntity.ok(CalendarResponse.from(calendar));
     }
 
