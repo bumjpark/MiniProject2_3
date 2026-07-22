@@ -19,10 +19,14 @@ import com.example.demo.auth.security.CustomUserDetails;
 import com.example.demo.auth.security.JwtUtil;
 import com.example.demo.auth.service.UserService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.Optional;
 
 import lombok.RequiredArgsConstructor;
 
+@Tag(name = "인증 API", description = "로그인 및 로그아웃 관련 API")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/users")
@@ -33,6 +37,7 @@ public class AuthController {
         private final UserRepository userRepository;
         private final UserService userService;
 
+        @Operation(summary = "로그인", description = "이메일과 비밀번호로 인증 후 AccessToken 및 RefreshToken을 발급받습니다.")
         @PostMapping("/login")
         public LoginResponseDto login(@RequestBody LoginRequestDto request) {
 
@@ -58,6 +63,7 @@ public class AuthController {
                 return new LoginResponseDto(token, refreshToken);
         }
 
+        @Operation(summary = "로그아웃", description = "Bearer 토큰 인증을 통해 로그아웃을 수행하고 RefreshToken을 무효화합니다.", security = @SecurityRequirement(name = "bearerAuth"))
         @PostMapping("/logout")
         public ResponseEntity<String> logout() {
                 // JwtFilter에서 이미 인증된 상태이므로 SecurityContext에서 이메일 추출
