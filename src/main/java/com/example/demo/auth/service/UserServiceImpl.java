@@ -43,4 +43,12 @@ public class UserServiceImpl implements UserService {
 				savedUser.getName());
 	}
 
+	@Override
+	public void logout(String email) {
+		User user = userRepository.findByEmail(email)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
+		user.setRefreshToken(null);
+		userRepository.save(user);
+	}
+
 }
