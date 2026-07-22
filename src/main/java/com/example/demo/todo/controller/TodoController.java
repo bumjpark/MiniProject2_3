@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -14,23 +15,26 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.tags.Tag;
 
+import com.example.demo.auth.security.CustomUserDetails;
 import com.example.demo.todo.dto.TodoCreateRequest;
 import com.example.demo.todo.dto.TodoResponse;
 import com.example.demo.todo.dto.TodoUpdateRequest;
 import com.example.demo.todo.service.TodoService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/todos")
 @RequiredArgsConstructor
 @Tag(name = "Todo", description = "Todo 생성, 조회, 수정, 완료 처리, 카테고리 연결 및 삭제 API")
+@SecurityRequirement(name = "bearerAuth")
 public class TodoController {
 
     private final TodoService todoService;
@@ -38,31 +42,22 @@ public class TodoController {
     @GetMapping
     @Operation(
             summary = "Todo 목록 조회",
-            description = "완료 상태, TodoList, 카테고리 조건으로 사용자의 Todo를 조회합니다."
+            description = "JWT 사용자의 Todo를 완료 상태, TodoList, 카테고리 조건으로 조회합니다."
     )
     @ApiResponse(responseCode = "200", description = "조회 성공")
     public ResponseEntity<List<TodoResponse>> getTodos(
-            @Parameter(description = "사용자 ID", example = "1")
-            @RequestParam(name = "userId") Long userId,
+            @Parameter(hidden = true)
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @Parameter(description = "완료 여부. 생략하면 전체 조회", example = "false")
-            @RequestParam(
-                    name = "completed",
-                    required = false
-            ) Boolean completed,
+            @RequestParam(name = "completed", required = false) Boolean completed,
             @Parameter(description = "TodoList ID. 생략하면 모든 목록 조회", example = "1")
-            @RequestParam(
-                    name = "listId",
-                    required = false
-            ) Long listId,
+            @RequestParam(name = "listId", required = false) Long listId,
             @Parameter(description = "카테고리 ID. 생략하면 모든 카테고리 조회", example = "1")
-            @RequestParam(
-                    name = "categoryId",
-                    required = false
-            ) Long categoryId
+            @RequestParam(name = "categoryId", required = false) Long categoryId
     ) {
         return ResponseEntity.ok(
                 todoService.getTodos(
-                        userId,
+                        currentUserId(userDetails),
                         completed,
                         listId,
                         categoryId
@@ -78,11 +73,16 @@ public class TodoController {
             @ApiResponse(responseCode = "404", description = "TodoList 또는 카테고리 없음")
     })
     public ResponseEntity<TodoResponse> createTodo(
+            @Parameter(hidden = true)
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody TodoCreateRequest request
     ) {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(todoService.createTodo(request));
+                .body(todoService.createTodo(
+                        currentUserId(userDetails),
+                        request
+                ));
     }
 
     @PutMapping("/{todoId}")
@@ -96,16 +96,16 @@ public class TodoController {
             @ApiResponse(responseCode = "404", description = "관련 데이터 없음")
     })
     public ResponseEntity<TodoResponse> updateTodo(
+            @Parameter(hidden = true)
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @Parameter(description = "Todo ID", example = "1")
             @PathVariable(name = "todoId") Long todoId,
-            @Parameter(description = "사용자 ID", example = "1")
-            @RequestParam(name = "userId") Long userId,
             @RequestBody TodoUpdateRequest request
     ) {
         return ResponseEntity.ok(
                 todoService.updateTodo(
                         todoId,
-                        userId,
+                        currentUserId(userDetails),
                         request
                 )
         );
@@ -118,17 +118,17 @@ public class TodoController {
             @ApiResponse(responseCode = "404", description = "Todo 없음")
     })
     public ResponseEntity<TodoResponse> changeCompleted(
+            @Parameter(hidden = true)
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @Parameter(description = "Todo ID", example = "1")
             @PathVariable(name = "todoId") Long todoId,
-            @Parameter(description = "사용자 ID", example = "1")
-            @RequestParam(name = "userId") Long userId,
             @Parameter(description = "변경할 완료 여부", example = "true")
             @RequestParam(name = "completed") boolean completed
     ) {
         return ResponseEntity.ok(
                 todoService.changeCompleted(
                         todoId,
-                        userId,
+                        currentUserId(userDetails),
                         completed
                 )
         );
@@ -144,20 +144,17 @@ public class TodoController {
             @ApiResponse(responseCode = "404", description = "Todo 또는 카테고리 없음")
     })
     public ResponseEntity<TodoResponse> changeCategory(
+            @Parameter(hidden = true)
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @Parameter(description = "Todo ID", example = "1")
             @PathVariable(name = "todoId") Long todoId,
-            @Parameter(description = "사용자 ID", example = "1")
-            @RequestParam(name = "userId") Long userId,
             @Parameter(description = "카테고리 ID. 생략하면 연결 해제", example = "1")
-            @RequestParam(
-                    name = "categoryId",
-                    required = false
-            ) Long categoryId
+            @RequestParam(name = "categoryId", required = false) Long categoryId
     ) {
         return ResponseEntity.ok(
                 todoService.changeCategory(
                         todoId,
-                        userId,
+                        currentUserId(userDetails),
                         categoryId
                 )
         );
@@ -170,12 +167,16 @@ public class TodoController {
             @ApiResponse(responseCode = "404", description = "Todo 없음")
     })
     public ResponseEntity<Void> deleteTodo(
+            @Parameter(hidden = true)
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @Parameter(description = "Todo ID", example = "1")
-            @PathVariable(name = "todoId") Long todoId,
-            @Parameter(description = "사용자 ID", example = "1")
-            @RequestParam(name = "userId") Long userId
+            @PathVariable(name = "todoId") Long todoId
     ) {
-        todoService.deleteTodo(todoId, userId);
+        todoService.deleteTodo(todoId, currentUserId(userDetails));
         return ResponseEntity.noContent().build();
+    }
+
+    private Long currentUserId(CustomUserDetails userDetails) {
+        return userDetails.getUser().getId();
     }
 }

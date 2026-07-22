@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -11,9 +12,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.demo.auth.security.CustomUserDetails;
 import com.example.demo.todo.dto.TodoListCreateRequest;
 import com.example.demo.todo.dto.TodoListDto;
 import com.example.demo.todo.dto.TodoListUpdateRequest;
@@ -23,13 +24,15 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/todo-lists")
 @RequiredArgsConstructor
-@Tag(name = "TodoList", description = "사용자별 Todo 목록 CRUD API")
+@Tag(name = "TodoList", description = "JWT 사용자별 Todo 목록 CRUD API")
+@SecurityRequirement(name = "bearerAuth")
 public class TodoListController {
 
     private final TodoListService todoListService;
@@ -38,10 +41,12 @@ public class TodoListController {
     @Operation(summary = "TodoList 전체 조회")
     @ApiResponse(responseCode = "200", description = "조회 성공")
     public ResponseEntity<List<TodoListDto>> findAll(
-            @Parameter(description = "사용자 ID", example = "1")
-            @RequestParam(name = "userId") Long userId
+            @Parameter(hidden = true)
+            @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        return ResponseEntity.ok(todoListService.findAll(userId));
+        return ResponseEntity.ok(
+                todoListService.findAll(currentUserId(userDetails))
+        );
     }
 
     @GetMapping("/{listId}")
@@ -51,12 +56,17 @@ public class TodoListController {
             @ApiResponse(responseCode = "404", description = "TodoList 없음")
     })
     public ResponseEntity<TodoListDto> findOne(
+            @Parameter(hidden = true)
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @Parameter(description = "TodoList ID", example = "1")
-            @PathVariable(name = "listId") Long listId,
-            @Parameter(description = "사용자 ID", example = "1")
-            @RequestParam(name = "userId") Long userId
+            @PathVariable(name = "listId") Long listId
     ) {
-        return ResponseEntity.ok(todoListService.findOne(listId, userId));
+        return ResponseEntity.ok(
+                todoListService.findOne(
+                        listId,
+                        currentUserId(userDetails)
+                )
+        );
     }
 
     @PostMapping
@@ -66,11 +76,16 @@ public class TodoListController {
             @ApiResponse(responseCode = "400", description = "잘못된 요청")
     })
     public ResponseEntity<TodoListDto> create(
+            @Parameter(hidden = true)
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody TodoListCreateRequest request
     ) {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(todoListService.create(request));
+                .body(todoListService.create(
+                        currentUserId(userDetails),
+                        request
+                ));
     }
 
     @PutMapping("/{listId}")
@@ -80,14 +95,18 @@ public class TodoListController {
             @ApiResponse(responseCode = "404", description = "TodoList 없음")
     })
     public ResponseEntity<TodoListDto> update(
+            @Parameter(hidden = true)
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @Parameter(description = "TodoList ID", example = "1")
             @PathVariable(name = "listId") Long listId,
-            @Parameter(description = "사용자 ID", example = "1")
-            @RequestParam(name = "userId") Long userId,
             @RequestBody TodoListUpdateRequest request
     ) {
         return ResponseEntity.ok(
-                todoListService.update(listId, userId, request)
+                todoListService.update(
+                        listId,
+                        currentUserId(userDetails),
+                        request
+                )
         );
     }
 
@@ -101,12 +120,16 @@ public class TodoListController {
             @ApiResponse(responseCode = "404", description = "TodoList 없음")
     })
     public ResponseEntity<Void> delete(
+            @Parameter(hidden = true)
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @Parameter(description = "TodoList ID", example = "1")
-            @PathVariable(name = "listId") Long listId,
-            @Parameter(description = "사용자 ID", example = "1")
-            @RequestParam(name = "userId") Long userId
+            @PathVariable(name = "listId") Long listId
     ) {
-        todoListService.delete(listId, userId);
+        todoListService.delete(listId, currentUserId(userDetails));
         return ResponseEntity.noContent().build();
+    }
+
+    private Long currentUserId(CustomUserDetails userDetails) {
+        return userDetails.getUser().getId();
     }
 }

@@ -72,6 +72,7 @@ public class TodoService {
 
     @Transactional
     public TodoResponse createTodo(
+            Long userId,
             TodoCreateRequest request
     ) {
         if (request == null) {
@@ -81,17 +82,17 @@ public class TodoService {
             );
         }
 
-        validateUserId(request.userId());
+        validateUserId(userId);
         validateContent(request.content());
         TodoList todoList = request.listId() == null
                 ? null
-                : findTodoList(request.listId(), request.userId());
+                : findTodoList(request.listId(), userId);
         Category category = request.categoryId() == null
                 ? null
                 : findCategory(request.categoryId());
 
         Todo todo = new Todo(
-                request.userId(),
+                userId,
                 todoList,
                 category,
                 request.content().trim(),

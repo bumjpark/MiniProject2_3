@@ -40,7 +40,10 @@ public class TodoListService {
     }
 
     @Transactional
-    public TodoListDto create(TodoListCreateRequest request) {
+    public TodoListDto create(
+            Long userId,
+            TodoListCreateRequest request
+    ) {
         if (request == null) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
@@ -48,12 +51,12 @@ public class TodoListService {
             );
         }
 
-        validateUserId(request.userId());
+        validateUserId(userId);
         validateListName(request.listName());
 
         TodoList saved = todoListRepository.save(
                 new TodoList(
-                        request.userId(),
+                        userId,
                         request.listName().trim()
                 )
         );

@@ -6,8 +6,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 @Schema(description = "Todo 생성 요청")
 public record TodoCreateRequest(
-        @Schema(description = "사용자 ID", example = "1")
-        Long userId,
         @Schema(description = "TodoList ID. 목록 없이 생성할 경우 생략", example = "1")
         Long listId,
         @Schema(description = "카테고리 ID. 카테고리 없이 생성할 경우 생략", example = "1")
