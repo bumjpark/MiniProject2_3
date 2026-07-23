@@ -7,7 +7,6 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.NoSuchElementException;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +17,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.jdbc.Sql;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.example.demo.todo.dto.CategoryCreateRequest;
@@ -57,6 +57,7 @@ import jakarta.validation.Validation;
         CalendarService.class,
         CurrentUserResolver.class
 })
+@Sql("/sql/test.sql")
 class TodoIntegrationTest {
 
     @Autowired
@@ -76,39 +77,6 @@ class TodoIntegrationTest {
 
     @Autowired
     private EntityManager entityManager;
-
-    // 외부 SQL 스크립트 없이, 각 테스트 실행 전에 필요한 데이터를 직접 INSERT.
-    @BeforeEach
-    void setUpFixtureData() {
-        insert("DELETE FROM todo");
-        insert("DELETE FROM todo_list");
-        insert("DELETE FROM category");
-
-        insert("INSERT INTO user (id, email, password, name, refresh_token) VALUES (1001, 'todo-user-1001@test.com', 'pw', '사용자1', NULL)");
-        insert("INSERT INTO user (id, email, password, name, refresh_token) VALUES (1002, 'todo-user-1002@test.com', 'pw', '사용자2', NULL)");
-
-        insert("INSERT INTO todo_list (list_id, user_id, name) VALUES (3001, 1001, '사용자 1 업무')");
-        insert("INSERT INTO todo_list (list_id, user_id, name) VALUES (3002, 1001, '사용자 1 개인')");
-
-        insert("INSERT INTO category (category_id, category_name) VALUES (2001, '중요')");
-        insert("INSERT INTO category (category_id, category_name) VALUES (2002, '보통')");
-        insert("INSERT INTO category (category_id, category_name) VALUES (2003, '기타')");
-
-
-        insert("INSERT INTO todo (todo_id, user_id, list_id, category_id, content, deadline, todo_completed) "
-                + "VALUES (4001, 1001, 3001, 2001, '업무 Todo', CURDATE() + INTERVAL 3 DAY, false)");
-        insert("INSERT INTO todo (todo_id, user_id, list_id, category_id, content, deadline, todo_completed) "
-                + "VALUES (4002, 1001, 3001, 2001, '완료된 업무 Todo', CURDATE() + INTERVAL 3 DAY, true)");
-        insert("INSERT INTO todo (todo_id, user_id, list_id, category_id, content, deadline, todo_completed) "
-                + "VALUES (4005, 1002, NULL, NULL, '다른 사용자 Todo', CURDATE() + INTERVAL 3 DAY, false)");
-
-        entityManager.flush();
-        entityManager.clear();
-    }
-
-    private void insert(String nativeSql) {
-        entityManager.createNativeQuery(nativeSql).executeUpdate();
-    }
 
     @Test
     @DisplayName("사용자와 목록 및 카테고리 조건으로 Todo를 조회한다")
