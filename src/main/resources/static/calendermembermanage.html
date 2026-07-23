@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Mini9 캘린더 멤버 관리">
+  <title>캘린더 멤버 — Mini9</title>
+  <link rel="stylesheet" href="/users/app.css">
+  <script src="/users/app.js"></script>
+  <script>Mini9.requireAuth();</script>
+</head>
+<body>
+  <a class="skip-link" href="#main">본문으로 이동</a>
+  <div data-site-header></div>
+
+  <main id="main" class="page page--narrow">
+    <div class="page-heading">
+      <div>
+        <p class="eyebrow">Calendar members</p>
+        <h1>멤버 관리</h1>
+        <p class="lead">캘린더를 함께 사용할 멤버를 사용자 ID로 추가하거나 제외하세요.</p>
+      </div>
+      <a class="btn btn--quiet" id="backLink" href="calender.html">캘린더로</a>
+    </div>
+
+    <div id="status" class="status-strip status-strip--error" role="alert" hidden></div>
+
+    <section class="card">
+      <div class="card__header">
+        <div>
+          <p class="eyebrow">Choose calendar</p>
+          <h2>관리할 캘린더</h2>
+        </div>
+      </div>
+      <div class="card__body">
+        <div class="field">
+          <label for="calendarSelect">캘린더</label>
+          <select class="select" id="calendarSelect"><option value="">불러오는 중…</option></select>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:20px">
+      <div class="card__header">
+        <div>
+          <p class="eyebrow">Current members</p>
+          <h2>현재 멤버 <span class="muted" id="memberCount"></span></h2>
+        </div>
+      </div>
+      <div class="card__body">
+        <div class="member-cloud" id="memberCloud">
+          <span class="skeleton" style="width:120px"></span>
+        </div>
+      </div>
+    </section>
+
+    <div class="grid grid--2" style="margin-top:20px">
+      <section class="card">
+        <div class="card__body">
+          <p class="eyebrow">Invite</p>
+          <h2>멤버 추가</h2>
+          <p class="muted small">추가할 사용자의 숫자 ID를 입력하세요.</p>
+          <form id="addForm">
+            <div class="field">
+              <label for="addUserId">사용자 ID</label>
+              <input class="input" id="addUserId" type="number" min="1" step="1" placeholder="예: 2" required>
+            </div>
+            <button class="btn" style="width:100%;margin-top:18px" type="submit">멤버 추가</button>
+          </form>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card__body">
+          <p class="eyebrow" style="color:#d70015">Remove</p>
+          <h2>멤버 제외</h2>
+          <p class="muted small">현재 API는 이름만 반환하므로 제외할 사용자의 ID를 직접 입력해야 합니다.</p>
+          <form id="removeForm">
+            <div class="field">
+              <label for="removeUserId">사용자 ID</label>
+              <input class="input" id="removeUserId" type="number" min="1" step="1" placeholder="예: 2" required>
+            </div>
+            <button class="btn btn--danger" style="width:100%;margin-top:18px" type="submit">멤버 제외</button>
+          </form>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const select = document.querySelector("#calendarSelect");
+    const cloud = document.querySelector("#memberCloud");
+    const statusElement = document.querySelector("#status");
+    let calendars = [];
+    let calendarId = Mini9.selectedCalendarId();
+
+    function renderMembers(calendar) {
+      const members = calendar?.members || [];
+      document.querySelector("#memberCount").textContent = `· ${members.length}명`;
+      cloud.innerHTML = members.length
+        ? members.map((name) => `<span class="member-chip">${Mini9.escapeHtml(name)}</span>`).join("")
+        : `<p class="muted small" style="margin:0">표시할 멤버가 없습니다.</p>`;
+      document.querySelector("#backLink").href = `calender.html${calendarId ? `?calendarId=${calendarId}` : ""}`;
+    }
+
+    async function loadCalendars() {
+      try {
+        calendars = await Mini9.api("/calendars");
+        if (!calendars.some((item) => String(item.calendarId) === String(calendarId))) {
+          calendarId = calendars[0]?.calendarId || "";
+        }
+        select.innerHTML = calendars.length
+          ? calendars.map((item) =>
+              `<option value="${item.calendarId}">${Mini9.escapeHtml(item.name)}</option>`).join("")
+          : `<option value="">캘린더 없음</option>`;
+        select.value = calendarId;
+        renderMembers(calendars.find((item) => String(item.calendarId) === String(calendarId)));
+      } catch (error) {
+        Mini9.showStatus(statusElement, error.message, "error");
+      }
+    }
+
+    select.addEventListener("change", () => {
+      calendarId = select.value;
+      Mini9.setSelectedCalendarId(calendarId);
+      renderMembers(calendars.find((item) => String(item.calendarId) === String(calendarId)));
+    });
+
+    async function changeMember(mode, userId) {
+      if (!calendarId) throw new Error("먼저 캘린더를 선택해주세요.");
+      const result = await Mini9.api(`/calendars/${calendarId}/members/${userId}`, {
+        method: mode === "add" ? "POST" : "DELETE"
+      });
+      const index = calendars.findIndex((item) => String(item.calendarId) === String(calendarId));
+      if (index >= 0) calendars[index] = result;
+      renderMembers(result);
+    }
+
+    document.querySelector("#addForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      try {
+        await changeMember("add", document.querySelector("#addUserId").value);
+        event.target.reset();
+        Mini9.toast("멤버를 추가했습니다.");
+      } catch (error) {
+        Mini9.toast(error.message, "error");
+      }
+    });
+
+    document.querySelector("#removeForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const id = document.querySelector("#removeUserId").value;
+      const confirmed = await Mini9.confirmAction({
+        title: "멤버를 제외할까요?",
+        message: `사용자 ID ${id}를 이 캘린더에서 제외합니다.`,
+        confirmText: "멤버 제외",
+        danger: true
+      });
+      if (!confirmed) return;
+      try {
+        await changeMember("remove", id);
+        event.target.reset();
+        Mini9.toast("멤버를 제외했습니다.");
+      } catch (error) {
+        Mini9.toast(error.message, "error");
+      }
+    });
+
+    loadCalendars();
+  </script>
+</body>
+</html>

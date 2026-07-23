@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Mini9 할 일 목록 관리">
+  <title>할 일 목록 — Mini9</title>
+  <link rel="stylesheet" href="/users/app.css">
+  <script src="/users/app.js"></script>
+  <script>Mini9.requireAuth();</script>
+</head>
+<body>
+  <a class="skip-link" href="#main">본문으로 이동</a>
+  <div data-site-header></div>
+
+  <main id="main" class="page">
+    <div class="page-heading">
+      <div>
+        <p class="eyebrow">Todo lists</p>
+        <h1>목록</h1>
+        <p class="lead">업무와 생활처럼 성격이 다른 할 일을 목록으로 나눠 관리하세요.</p>
+      </div>
+      <a class="btn btn--outline" href="todo.html">전체 할 일 보기</a>
+    </div>
+
+    <div class="grid grid--2" style="grid-template-columns:minmax(280px,.72fr) minmax(0,1.28fr)">
+      <section class="card">
+        <div class="card__header">
+          <div>
+            <p class="eyebrow">New list</p>
+            <h2>새 목록 만들기</h2>
+          </div>
+        </div>
+        <div class="card__body">
+          <div id="createStatus" class="status-strip" role="alert" hidden></div>
+          <form id="createForm">
+            <div class="field">
+              <label for="listName">목록 이름</label>
+              <input class="input" id="listName" name="listName" maxlength="100"
+                     placeholder="예: 개인 업무" required>
+              <p class="field__hint">최대 100자까지 입력할 수 있습니다.</p>
+            </div>
+            <button class="btn" style="margin-top:20px;width:100%" type="submit">목록 추가</button>
+          </form>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card__header">
+          <div>
+            <p class="eyebrow">My lists</p>
+            <h2>나의 목록 <span class="muted" id="listCount"></span></h2>
+          </div>
+          <button class="btn btn--compact btn--quiet" id="refreshButton" type="button">새로고침</button>
+        </div>
+        <div id="listContent">
+          <div class="empty">
+            <div>
+              <div class="skeleton" style="width:180px;margin:0 auto 12px"></div>
+              <div class="skeleton" style="width:250px;margin:0 auto"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <dialog class="dialog" id="renameDialog">
+    <form id="renameForm">
+      <div class="dialog__body">
+        <p class="eyebrow">Rename</p>
+        <h2>목록 이름 바꾸기</h2>
+        <div class="field" style="margin-top:20px">
+          <label for="renameInput">새 이름</label>
+          <input class="input" id="renameInput" maxlength="100" required>
+        </div>
+      </div>
+      <div class="dialog__actions">
+        <button class="btn btn--compact btn--quiet" id="renameCancel" type="button">취소</button>
+        <button class="btn btn--compact" type="submit">저장</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script>
+    const content = document.querySelector("#listContent");
+    const count = document.querySelector("#listCount");
+    const createForm = document.querySelector("#createForm");
+    const createStatus = document.querySelector("#createStatus");
+    const renameDialog = document.querySelector("#renameDialog");
+    const renameForm = document.querySelector("#renameForm");
+    let editingListId = null;
+
+    async function loadLists() {
+      try {
+        const lists = await Mini9.api("/api/todo-lists");
+        count.textContent = `· ${lists.length}개`;
+        if (!lists.length) {
+          content.innerHTML = `
+            <div class="empty">
+              <div>
+                <div class="empty__mark">＋</div>
+                <h3>아직 목록이 없습니다</h3>
+                <p>왼쪽에서 첫 목록을 만들어 할 일을 목적별로 정리해보세요.</p>
+              </div>
+            </div>`;
+          return;
+        }
+        content.innerHTML = `<ul class="list">${lists.map((list) => `
+          <li class="list-row">
+            <div class="empty__mark" style="width:38px;height:38px;margin:0;border-radius:12px;font-size:15px">#</div>
+            <div class="list-row__main">
+              <p class="list-row__title">${Mini9.escapeHtml(list.listName)}</p>
+              <div class="list-row__meta">목록 ID ${list.listId}</div>
+            </div>
+            <div class="list-row__actions">
+              <a class="btn btn--compact btn--text" href="todo.html?listId=${list.listId}">할 일 보기</a>
+              <button class="icon-btn" type="button" data-rename="${list.listId}"
+                      data-name="${Mini9.escapeHtml(list.listName)}" aria-label="이름 변경">✎</button>
+              <button class="icon-btn icon-btn--danger" type="button" data-delete="${list.listId}"
+                      data-name="${Mini9.escapeHtml(list.listName)}" aria-label="목록 삭제">×</button>
+            </div>
+          </li>`).join("")}</ul>`;
+      } catch (error) {
+        content.innerHTML = `
+          <div class="empty"><div>
+            <div class="empty__mark">!</div>
+            <h3>목록을 불러오지 못했습니다</h3>
+            <p>${Mini9.escapeHtml(error.message)}</p>
+            <button class="btn btn--compact btn--outline" type="button" onclick="loadLists()">다시 시도</button>
+          </div></div>`;
+      }
+    }
+
+    createForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const button = createForm.querySelector("button[type=submit]");
+      button.disabled = true;
+      Mini9.showStatus(createStatus, "");
+      try {
+        await Mini9.api("/api/todo-lists", {
+          method: "POST",
+          body: JSON.stringify({ listName: createForm.listName.value.trim() })
+        });
+        createForm.reset();
+        Mini9.showStatus(createStatus, "새 목록을 추가했습니다.", "success");
+        await loadLists();
+      } catch (error) {
+        Mini9.showStatus(createStatus, error.message, "error");
+      } finally {
+        button.disabled = false;
+      }
+    });
+
+    content.addEventListener("click", async (event) => {
+      const rename = event.target.closest("[data-rename]");
+      if (rename) {
+        editingListId = rename.dataset.rename;
+        document.querySelector("#renameInput").value = rename.dataset.name;
+        renameDialog.showModal();
+        return;
+      }
+      const remove = event.target.closest("[data-delete]");
+      if (!remove) return;
+      const confirmed = await Mini9.confirmAction({
+        title: "목록을 삭제할까요?",
+        message: `'${remove.dataset.name}' 목록만 삭제됩니다. 목록 안의 할 일은 유지되고 연결만 해제됩니다.`,
+        confirmText: "목록 삭제",
+        danger: true
+      });
+      if (!confirmed) return;
+      try {
+        await Mini9.api(`/api/todo-lists/${remove.dataset.delete}`, { method: "DELETE" });
+        Mini9.toast("목록을 삭제했습니다.");
+        await loadLists();
+      } catch (error) {
+        Mini9.toast(error.message, "error");
+      }
+    });
+
+    renameForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      try {
+        await Mini9.api(`/api/todo-lists/${editingListId}`, {
+          method: "PUT",
+          body: JSON.stringify({ listName: document.querySelector("#renameInput").value.trim() })
+        });
+        renameDialog.close();
+        Mini9.toast("목록 이름을 변경했습니다.");
+        await loadLists();
+      } catch (error) {
+        Mini9.toast(error.message, "error");
+      }
+    });
+
+    document.querySelector("#renameCancel").addEventListener("click", () => renameDialog.close());
+    document.querySelector("#refreshButton").addEventListener("click", loadLists);
+    loadLists();
+  </script>
+</body>
+</html>

@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="할 일과 일정을 한 흐름으로 정리하는 Mini9">
+  <title>Mini9 — 오늘을 또렷하게</title>
+  <link rel="stylesheet" href="/users/app.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">본문으로 이동</a>
+  <div data-site-header></div>
+
+  <main id="main">
+    <section class="page hero">
+      <p class="eyebrow">Todo · Calendar · Together</p>
+      <h1>해야 할 일은 가볍게.<br>하루는 또렷하게.</h1>
+      <p class="lead">
+        흩어진 할 일과 일정을 한곳에서 정리하세요.
+        Mini9은 필요한 기능만 남겨 오늘 무엇에 집중할지 바로 보여줍니다.
+      </p>
+      <div class="btn-row">
+        <a class="btn" id="primaryAction" href="login.html">무료로 시작하기</a>
+        <a class="btn btn--outline" id="secondaryAction" href="join.html">계정 만들기</a>
+      </div>
+    </section>
+
+    <section class="page" style="padding-top:0">
+      <div class="product-frame" aria-label="Mini9 화면 미리보기">
+        <div class="product-frame__bar">
+          <span>Mini9 Workspace</span>
+          <span>오늘, 가장 중요한 것부터</span>
+        </div>
+        <div class="product-frame__grid">
+          <div class="product-frame__panel">
+            <p class="tiny" style="color:#8e8e93">나의 목록</p>
+            <h2 style="font-size:30px">차분하게 정리된<br>작업 공간.</h2>
+            <div style="margin-top:34px;display:grid;gap:10px">
+              <span class="badge" style="justify-content:flex-start;background:#323235;color:#f5f5f7">오늘 할 일</span>
+              <span class="badge" style="justify-content:flex-start;background:#323235;color:#a1a1a6">개인 프로젝트</span>
+              <span class="badge" style="justify-content:flex-start;background:#323235;color:#a1a1a6">이번 주</span>
+            </div>
+          </div>
+          <div class="product-frame__panel">
+            <p class="tiny" style="color:#2997ff">오늘</p>
+            <h2 style="font-size:30px">집중할 일 4개</h2>
+            <div class="demo-task">
+              <span class="demo-task__dot"></span>
+              <span>프로젝트 발표 자료 정리<small>오후 2시까지</small></span>
+            </div>
+            <div class="demo-task">
+              <span class="demo-task__dot"></span>
+              <span>주간 일정 확인<small>팀 캘린더</small></span>
+            </div>
+            <div class="demo-task">
+              <span class="demo-task__dot" style="background:#248a3d;border-color:#248a3d"></span>
+              <span style="color:#8e8e93;text-decoration:line-through">회의 안건 공유<small>완료</small></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page" style="padding-top:12px">
+      <div class="grid grid--3">
+        <article class="card feature">
+          <div class="feature__mark">01</div>
+          <h2>할 일은 단순하게</h2>
+          <p>목록과 카테고리, 마감일만으로 해야 할 일을 빠르게 나누고 완료 상태를 바로 바꿉니다.</p>
+        </article>
+        <article class="card feature">
+          <div class="feature__mark">02</div>
+          <h2>일정은 한눈에</h2>
+          <p>공유 캘린더별 일정을 월간 화면에서 확인하고 색상 라벨로 중요한 흐름을 구분합니다.</p>
+        </article>
+        <article class="card feature">
+          <div class="feature__mark">03</div>
+          <h2>필요할 때 연결</h2>
+          <p>할 일을 만들면서 일정도 함께 만들 수 있어 계획과 실행 사이의 빈틈을 줄입니다.</p>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="page" style="padding-top:0">
+    <div style="padding-top:24px;border-top:1px solid #d2d2d7;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap">
+      <span class="brand"><span class="brand__mark">M9</span><span>Mini9</span></span>
+      <span class="muted tiny">할 일과 일정을 위한 작은 작업 공간</span>
+    </div>
+  </footer>
+
+  <script src="/users/app.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      if (!Mini9.accessToken()) return;
+      const primary = document.querySelector("#primaryAction");
+      const secondary = document.querySelector("#secondaryAction");
+      primary.href = "todo.html";
+      primary.textContent = "작업 공간 열기";
+      secondary.href = "calender.html";
+      secondary.textContent = "캘린더 보기";
+    });
+  </script>
+</body>
+</html>
