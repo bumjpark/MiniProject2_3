@@ -235,15 +235,16 @@ src/main/java/com/example/demo
 ## 1. 프로젝트 클론
 
 ```bash
-git clone git clone https://github.com/bumjpark/MiniProject2_3.git
-cd your-repository
+git clone https://github.com/bumjpark/MiniProject2_3.git
+cd [your-repository]
 ```
 
 ## 2. MySQL 데이터베이스 생성
 
 ```sql
-CREATE DATABASE todo_db;
+CREATE DATABASE todo_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
+testcode 실행 시 test/resources/sql 을 통해 자동으로 DB가 삽입됨
 
 ## 3. application.properties 설정
 
@@ -272,7 +273,6 @@ jwt.secret=YOUR_SECRET_KEY
 - **Postman**: API 테이블을 참고하여 테스트 진행
 
 ---
-
 # 🧪 테스트
 
 - JUnit5
