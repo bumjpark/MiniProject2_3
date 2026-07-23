@@ -234,7 +234,7 @@ src/main/java/com/example/demo
 ## 1. 프로젝트 클론
 
 ```bash
-git clone https://github.com/your-org/your-repository.git
+git clone git clone https://github.com/bumjpark/MiniProject2_3.git
 cd your-repository
 ```
 
@@ -266,9 +266,10 @@ jwt.secret=YOUR_SECRET_KEY
 
 또는 IDE(STS4, IntelliJ)에서 `MiniProject23Application`을 실행합니다.
 
-## 5. API 테스트
+## 5. API 테스트 및 문서
+- **Swagger UI**: http://localhost:8080/swagger-ui/index.html
+- **Postman**: API 테이블을 참고하여 테스트 진행
 
-Postman 또는 Swagger를 이용하여 API를 테스트할 수 있습니다.
 ---
 
 # 🧪 테스트
@@ -288,6 +289,6 @@ Postman 또는 Swagger를 이용하여 API를 테스트할 수 있습니다.
 
 | 이름 | 담당 |
 |------|------|
-| 박종범 | 인증/인가, JWT, Refresh Token, 로그아웃 |
+| 박종범 | 인증/인가 |
 | 권도하 | Calendar 기능 |
 | 전송흔 | To-Do 및 Front-End |
