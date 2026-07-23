@@ -227,6 +227,7 @@ src/main/java/com/example/demo
 | PATCH | /api/todos/{todoId}/category | To-Do 카테고리 변경 |
 
 </details>
+
 ---
 
 # 🚀 시작하기
