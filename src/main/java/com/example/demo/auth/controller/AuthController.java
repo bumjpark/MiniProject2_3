@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.demo.auth.dto.LoginRequestDto;
 import com.example.demo.auth.dto.LoginResponseDto;
 import com.example.demo.auth.dto.SignupRequestDto;
+import com.example.demo.auth.dto.TokenRefreshRequestDto;
+import com.example.demo.auth.dto.TokenRefreshResponseDto;
 import com.example.demo.auth.entity.User;
 import com.example.demo.auth.repository.UserRepository;
 import com.example.demo.auth.security.CustomUserDetails;
@@ -61,6 +63,13 @@ public class AuthController {
                 }
 
                 return new LoginResponseDto(token, refreshToken);
+        }
+
+        @Operation(summary = "토큰 재발급", description = "Refresh Token을 이용해 새로운 Access Token을 발급받습니다.")
+        @PostMapping("/refresh")
+        public ResponseEntity<TokenRefreshResponseDto> refresh(@RequestBody TokenRefreshRequestDto request) {
+                TokenRefreshResponseDto response = userService.refreshAccessToken(request.getRefreshToken());
+                return ResponseEntity.ok(response);
         }
 
         @Operation(summary = "로그아웃", description = "Bearer 토큰 인증을 통해 로그아웃을 수행하고 RefreshToken을 무효화합니다.", security = @SecurityRequirement(name = "bearerAuth"))
