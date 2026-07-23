@@ -3,8 +3,10 @@ package com.example.demo.calendar.service;
 import com.example.demo.calendar.dto.ScheduleRequest;
 import com.example.demo.calendar.entity.Schedule;
 import com.example.demo.calendar.repository.ScheduleRepository;
+import com.example.demo.todo.repository.TodoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -18,6 +20,7 @@ public class ScheduleService {
 
     private final ScheduleRepository scheduleRepository;
     private final CalendarService calendarService;
+    private final TodoRepository todoRepository;
 
     public Schedule create(Long calendarId, ScheduleRequest request) {
         calendarService.getById(calendarId);
@@ -70,8 +73,17 @@ public class ScheduleService {
         return scheduleRepository.save(schedule);
     }
 
+    @Transactional
     public void delete(Long calendarId, Long scheduleId) {
         Schedule schedule = getById(calendarId, scheduleId);
+
+        // 일정을 지운다고 남의 Todo까지 사라지면 안 되니, Todo는 남기고 연결만 끊는다.
+        todoRepository.findByScheduleId(scheduleId)
+                .ifPresent(todo -> {
+                    todo.linkSchedule(null);
+                    todoRepository.save(todo);
+                });
+
         scheduleRepository.deleteById(schedule.getScheduleId());
     }
 

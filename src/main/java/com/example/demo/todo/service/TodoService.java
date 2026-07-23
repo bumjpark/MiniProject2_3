@@ -1,5 +1,7 @@
 package com.example.demo.todo.service;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
@@ -7,6 +9,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.example.demo.calendar.dto.ScheduleRequest;
+import com.example.demo.calendar.entity.Schedule;
+import com.example.demo.calendar.repository.ScheduleRepository;
+import com.example.demo.calendar.service.ScheduleService;
 import com.example.demo.todo.dto.TodoCreateRequest;
 import com.example.demo.todo.dto.TodoResponse;
 import com.example.demo.todo.dto.TodoUpdateRequest;
@@ -27,6 +33,8 @@ public class TodoService {
     private final TodoRepository todoRepository;
     private final TodoListRepository todoListRepository;
     private final CategoryRepository categoryRepository;
+    private final ScheduleService scheduleService;
+    private final ScheduleRepository scheduleRepository;
 
     public List<TodoResponse> getTodos(
             Long userId,
@@ -99,9 +107,27 @@ public class TodoService {
                 request.deadline()
         );
 
+        if (request.calendarId() != null) {
+            Schedule schedule = createLinkedSchedule(
+                    request.calendarId(),
+                    request.content().trim(),
+                    request.deadline()
+            );
+            todo.linkSchedule(schedule.getScheduleId());
+        }
+
         Todo savedTodo = todoRepository.save(todo);
 
         return TodoResponse.from(savedTodo);
+    }
+
+    // Todo와 같이 만들 캘린더 일정을 생성한다. 캘린더 멤버십 검증은 ScheduleService.create()가 대신 해준다.
+    private Schedule createLinkedSchedule(Long calendarId, String title, LocalDate deadline) {
+        LocalDateTime start = deadline == null ? null : deadline.atStartOfDay();
+        LocalDateTime end = start == null ? null : start.plusHours(1);
+
+        ScheduleRequest scheduleRequest = new ScheduleRequest(title, start, end, null);
+        return scheduleService.create(calendarId, scheduleRequest);
     }
 
     @Transactional
@@ -178,6 +204,11 @@ public class TodoService {
         validateUserId(userId);
 
         Todo todo = findTodo(todoId, userId);
+
+        // 연결된 캘린더 일정이 있다면 같이 지운다. 이미 이 Todo를 지우는 중이므로 멤버십 재검증 없이 직접 삭제.
+        if (todo.getScheduleId() != null) {
+            scheduleRepository.deleteById(todo.getScheduleId());
+        }
 
         todoRepository.delete(todo);
     }

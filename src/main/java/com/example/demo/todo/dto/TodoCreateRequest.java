@@ -22,6 +22,9 @@ public record TodoCreateRequest(
         String content,
         @Schema(description = "마감일. 마감일이 없으면 생략", example = "2026-07-30")
         @FutureOrPresent(message = "마감일은 오늘 이후여야 합니다.")
-        LocalDate deadline
+        LocalDate deadline,
+        @Schema(description = "같이 일정을 만들 캘린더 ID. 생략하면 일정은 만들지 않음", example = "1")
+        @Positive(message = "캘린더 ID는 양수여야 합니다.")
+        Long calendarId
 ) {
 }
