@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Mini9 할 일">
+  <title>할 일 — Mini9</title>
+  <link rel="stylesheet" href="/users/app.css">
+  <script src="/users/app.js"></script>
+  <script>Mini9.requireAuth();</script>
+</head>
+<body>
+  <a class="skip-link" href="#main">본문으로 이동</a>
+  <div data-site-header></div>
+
+  <main id="main" class="page">
+    <div class="page-heading">
+      <div>
+        <p class="eyebrow">My work</p>
+        <h1>할 일</h1>
+        <p class="lead">지금 해야 할 일을 확인하고 완료한 항목은 가볍게 정리하세요.</p>
+      </div>
+      <div class="btn-row">
+        <a class="btn btn--quiet" href="todolist.html">목록 관리</a>
+        <a class="btn" href="todocreate.html">＋ 새 할 일</a>
+      </div>
+    </div>
+
+    <section class="stats" aria-label="할 일 요약" style="margin-bottom:20px">
+      <div class="stat"><strong id="totalCount">—</strong><span>현재 조건의 전체 할 일</span></div>
+      <div class="stat"><strong id="pageCount">—</strong><span>이 페이지에 표시됨</span></div>
+      <div class="stat"><strong id="pageNumber">—</strong><span>현재 페이지</span></div>
+    </section>
+
+    <section class="toolbar" aria-label="할 일 필터">
+      <div class="field" style="flex:0 0 auto">
+        <label>완료 상태</label>
+        <div class="segmented" id="statusFilter">
+          <button type="button" data-status="" aria-pressed="true">전체</button>
+          <button type="button" data-status="false" aria-pressed="false">진행 중</button>
+          <button type="button" data-status="true" aria-pressed="false">완료</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="listFilter">목록</label>
+        <select class="select" id="listFilter"><option value="">모든 목록</option></select>
+      </div>
+      <div class="field">
+        <label for="categoryFilter">카테고리</label>
+        <select class="select" id="categoryFilter"><option value="">모든 카테고리</option></select>
+      </div>
+      <div class="field" style="flex:0 0 105px">
+        <label for="sizeFilter">페이지 크기</label>
+        <select class="select" id="sizeFilter">
+          <option value="10">10개</option>
+          <option value="20" selected>20개</option>
+          <option value="50">50개</option>
+          <option value="100">100개</option>
+        </select>
+      </div>
+      <button class="btn btn--compact btn--quiet" id="resetButton" type="button">초기화</button>
+    </section>
+
+    <div id="status" class="status-strip status-strip--error" role="alert" hidden></div>
+
+    <section class="card">
+      <div id="todoContent">
+        <div class="empty"><div style="width:min(100%,380px)">
+          <div class="skeleton" style="margin-bottom:14px"></div>
+          <div class="skeleton" style="width:75%;margin-bottom:14px"></div>
+          <div class="skeleton" style="width:86%"></div>
+        </div></div>
+      </div>
+      <div class="pagination" id="pagination" hidden>
+        <span class="pagination__status" id="paginationStatus"></span>
+        <div class="pagination__controls">
+          <button class="btn btn--compact btn--quiet" id="prevButton" type="button">이전</button>
+          <button class="btn btn--compact btn--quiet" id="nextButton" type="button">다음</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <dialog class="dialog" id="editDialog">
+    <form id="editForm">
+      <div class="dialog__body">
+        <p class="eyebrow">Edit todo</p>
+        <h2>할 일 수정</h2>
+        <div class="field" style="margin-top:20px">
+          <label for="editContent">할 일</label>
+          <textarea class="textarea" id="editContent" maxlength="255" required></textarea>
+        </div>
+        <div class="form-grid" style="margin-top:16px">
+          <div class="field">
+            <label for="editList">목록</label>
+            <select class="select" id="editList"></select>
+          </div>
+          <div class="field">
+            <label for="editCategory">카테고리</label>
+            <select class="select" id="editCategory"></select>
+          </div>
+          <div class="field field--full">
+            <label for="editDeadline">마감일</label>
+            <input class="input" id="editDeadline" type="date">
+          </div>
+        </div>
+      </div>
+      <div class="dialog__actions">
+        <button class="btn btn--compact btn--quiet" id="editCancel" type="button">취소</button>
+        <button class="btn btn--compact" type="submit">저장</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script>
+    const todoContent = document.querySelector("#todoContent");
+    const statusElement = document.querySelector("#status");
+    const pagination = document.querySelector("#pagination");
+    const editDialog = document.querySelector("#editDialog");
+    const state = {
+      page: 0,
+      size: 20,
+      completed: "",
+      listId: "",
+      categoryId: "",
+      totalPages: 0,
+      todos: [],
+      lists: [],
+      categories: []
+    };
+    let editingTodoId = null;
+
+    function option(value, text) {
+      return `<option value="${value}">${Mini9.escapeHtml(text)}</option>`;
+    }
+
+    function syncFromUrl() {
+      const query = new URLSearchParams(location.search);
+      state.page = Math.max(0, Number(query.get("page") || 0));
+      state.size = [10, 20, 50, 100].includes(Number(query.get("size")))
+        ? Number(query.get("size")) : 20;
+      state.completed = ["true", "false"].includes(query.get("completed"))
+        ? query.get("completed") : "";
+      state.listId = query.get("listId") || "";
+      state.categoryId = query.get("categoryId") || "";
+    }
+
+    function syncControls() {
+      document.querySelector("#sizeFilter").value = state.size;
+      document.querySelector("#listFilter").value = state.listId;
+      document.querySelector("#categoryFilter").value = state.categoryId;
+      document.querySelectorAll("#statusFilter button").forEach((button) => {
+        button.setAttribute("aria-pressed", String(button.dataset.status === state.completed));
+      });
+      const query = Mini9.params({
+        page: state.page || "",
+        size: state.size === 20 ? "" : state.size,
+        completed: state.completed,
+        listId: state.listId,
+        categoryId: state.categoryId
+      });
+      history.replaceState(null, "", "todo.html" + (query.toString() ? "?" + query : ""));
+    }
+
+    async function loadMeta() {
+      const [lists, categories] = await Promise.all([
+        Mini9.api("/api/todo-lists"),
+        Mini9.api("/api/categories")
+      ]);
+      state.lists = lists;
+      state.categories = categories;
+      document.querySelector("#listFilter").insertAdjacentHTML(
+        "beforeend", lists.map((item) => option(item.listId, item.listName)).join("")
+      );
+      document.querySelector("#categoryFilter").insertAdjacentHTML(
+        "beforeend", categories.map((item) => option(item.categoryId, item.categoryName)).join("")
+      );
+      document.querySelector("#editList").innerHTML =
+        option("", "목록 없음") + lists.map((item) => option(item.listId, item.listName)).join("");
+      document.querySelector("#editCategory").innerHTML =
+        option("", "카테고리 없음") + categories.map((item) => option(item.categoryId, item.categoryName)).join("");
+      syncControls();
+    }
+
+    function deadlineBadge(todo) {
+      if (!todo.deadline) return "";
+      if (todo.completed) return `<span class="badge">${Mini9.formatDate(todo.deadline)}</span>`;
+      if (todo.remainingDays < 0) return `<span class="badge badge--red">${Math.abs(todo.remainingDays)}일 지남</span>`;
+      if (todo.remainingDays === 0) return `<span class="badge badge--orange">오늘 마감</span>`;
+      return `<span class="badge">${Mini9.formatDate(todo.deadline)}</span>`;
+    }
+
+    function renderTodos(data) {
+      state.todos = data.content;
+      state.totalPages = data.totalPages;
+      document.querySelector("#totalCount").textContent = data.totalElements.toLocaleString("ko-KR");
+      document.querySelector("#pageCount").textContent = data.content.length.toLocaleString("ko-KR");
+      document.querySelector("#pageNumber").textContent = data.totalPages ? `${data.page + 1} / ${data.totalPages}` : "0 / 0";
+      if (!data.content.length) {
+        todoContent.innerHTML = `
+          <div class="empty"><div>
+            <div class="empty__mark">✓</div>
+            <h3>표시할 할 일이 없습니다</h3>
+            <p>필터를 바꾸거나 새로운 할 일을 추가해보세요.</p>
+            <a class="btn btn--compact" href="todocreate.html">새 할 일 추가</a>
+          </div></div>`;
+      } else {
+        todoContent.innerHTML = `<ul class="list">${data.content.map((todo) => `
+          <li class="list-row ${todo.completed ? "is-complete" : ""}">
+            <button class="check" type="button" role="checkbox" aria-checked="${todo.completed}"
+                    data-complete="${todo.todoId}" data-value="${!todo.completed}"
+                    aria-label="${todo.completed ? "진행 중으로 변경" : "완료로 변경"}">✓</button>
+            <div class="list-row__main">
+              <p class="list-row__title">${Mini9.escapeHtml(todo.content)}</p>
+              <div class="list-row__meta">
+                ${todo.listName ? `<span>${Mini9.escapeHtml(todo.listName)}</span>` : "<span>목록 없음</span>"}
+                ${todo.categoryName ? `<span class="badge badge--blue">${Mini9.escapeHtml(todo.categoryName)}</span>` : ""}
+                ${deadlineBadge(todo)}
+                ${todo.scheduleId ? `<span class="badge badge--green">일정 연결됨</span>` : ""}
+              </div>
+            </div>
+            <div class="list-row__actions">
+              <button class="icon-btn" type="button" data-edit="${todo.todoId}" aria-label="할 일 수정">✎</button>
+              <button class="icon-btn icon-btn--danger" type="button" data-delete="${todo.todoId}"
+                      aria-label="할 일 삭제">×</button>
+            </div>
+          </li>`).join("")}</ul>`;
+      }
+      pagination.hidden = false;
+      document.querySelector("#paginationStatus").textContent =
+        data.totalElements ? `전체 ${data.totalElements}개 · ${data.page + 1}페이지` : "결과 없음";
+      document.querySelector("#prevButton").disabled = data.first;
+      document.querySelector("#nextButton").disabled = data.last || data.totalPages === 0;
+    }
+
+    async function loadTodos() {
+      Mini9.showStatus(statusElement, "");
+      syncControls();
+      try {
+        const query = Mini9.params({
+          page: state.page,
+          size: state.size,
+          completed: state.completed,
+          listId: state.listId,
+          categoryId: state.categoryId
+        });
+        const data = await Mini9.api("/api/todos?" + query);
+        if (data.totalPages && state.page >= data.totalPages) {
+          state.page = data.totalPages - 1;
+          return loadTodos();
+        }
+        renderTodos(data);
+      } catch (error) {
+        Mini9.showStatus(statusElement, error.message, "error");
+        todoContent.innerHTML = `<div class="empty"><div>
+          <div class="empty__mark">!</div><h3>할 일을 불러오지 못했습니다</h3>
+          <p>잠시 후 다시 시도해주세요.</p>
+          <button class="btn btn--compact btn--outline" onclick="loadTodos()">다시 시도</button>
+        </div></div>`;
+      }
+    }
+
+    document.querySelector("#statusFilter").addEventListener("click", (event) => {
+      const button = event.target.closest("[data-status]");
+      if (!button) return;
+      state.completed = button.dataset.status;
+      state.page = 0;
+      loadTodos();
+    });
+    document.querySelector("#listFilter").addEventListener("change", (event) => {
+      state.listId = event.target.value; state.page = 0; loadTodos();
+    });
+    document.querySelector("#categoryFilter").addEventListener("change", (event) => {
+      state.categoryId = event.target.value; state.page = 0; loadTodos();
+    });
+    document.querySelector("#sizeFilter").addEventListener("change", (event) => {
+      state.size = Number(event.target.value); state.page = 0; loadTodos();
+    });
+    document.querySelector("#resetButton").addEventListener("click", () => {
+      Object.assign(state, { page: 0, size: 20, completed: "", listId: "", categoryId: "" });
+      loadTodos();
+    });
+    document.querySelector("#prevButton").addEventListener("click", () => {
+      if (state.page > 0) { state.page -= 1; loadTodos(); scrollTo({ top: 0, behavior: "smooth" }); }
+    });
+    document.querySelector("#nextButton").addEventListener("click", () => {
+      if (state.page + 1 < state.totalPages) { state.page += 1; loadTodos(); scrollTo({ top: 0, behavior: "smooth" }); }
+    });
+
+    todoContent.addEventListener("click", async (event) => {
+      const complete = event.target.closest("[data-complete]");
+      if (complete) {
+        complete.disabled = true;
+        try {
+          await Mini9.api(`/api/todos/${complete.dataset.complete}/completed?completed=${complete.dataset.value}`, {
+            method: "PATCH"
+          });
+          await loadTodos();
+        } catch (error) {
+          Mini9.toast(error.message, "error");
+          complete.disabled = false;
+        }
+        return;
+      }
+      const edit = event.target.closest("[data-edit]");
+      if (edit) {
+        const todo = state.todos.find((item) => String(item.todoId) === edit.dataset.edit);
+        if (!todo) return;
+        editingTodoId = todo.todoId;
+        document.querySelector("#editContent").value = todo.content;
+        document.querySelector("#editList").value = todo.listId || "";
+        document.querySelector("#editCategory").value = todo.categoryId || "";
+        document.querySelector("#editDeadline").value = todo.deadline || "";
+        document.querySelector("#editDeadline").min = Mini9.todayValue();
+        editDialog.showModal();
+        return;
+      }
+      const remove = event.target.closest("[data-delete]");
+      if (!remove) return;
+      const confirmed = await Mini9.confirmAction({
+        title: "할 일을 삭제할까요?",
+        message: "삭제한 할 일은 복구할 수 없습니다. 연결된 일정이 있다면 함께 삭제될 수 있습니다.",
+        confirmText: "할 일 삭제",
+        danger: true
+      });
+      if (!confirmed) return;
+      try {
+        await Mini9.api(`/api/todos/${remove.dataset.delete}`, { method: "DELETE" });
+        Mini9.toast("할 일을 삭제했습니다.");
+        await loadTodos();
+      } catch (error) {
+        Mini9.toast(error.message, "error");
+      }
+    });
+
+    document.querySelector("#editCancel").addEventListener("click", () => editDialog.close());
+    document.querySelector("#editForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const numberOrNull = (value) => value ? Number(value) : null;
+      try {
+        await Mini9.api(`/api/todos/${editingTodoId}`, {
+          method: "PUT",
+          body: JSON.stringify({
+            listId: numberOrNull(document.querySelector("#editList").value),
+            categoryId: numberOrNull(document.querySelector("#editCategory").value),
+            content: document.querySelector("#editContent").value.trim(),
+            deadline: document.querySelector("#editDeadline").value || null
+          })
+        });
+        editDialog.close();
+        Mini9.toast("할 일을 수정했습니다.");
+        await loadTodos();
+      } catch (error) {
+        Mini9.toast(error.message, "error");
+      }
+    });
+
+    syncFromUrl();
+    loadMeta().then(loadTodos).catch((error) => {
+      Mini9.showStatus(statusElement, error.message, "error");
+      loadTodos();
+    });
+  </script>
+</body>
+</html>

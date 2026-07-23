@@ -3,6 +3,8 @@ package com.example.demo.todo.repository;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -12,7 +14,8 @@ import com.example.demo.todo.entity.Todo;
 
 public interface TodoRepository extends JpaRepository<Todo, Long> {
 
-    @Query("""
+    @Query(
+            value = """
             SELECT t
             FROM Todo t
             LEFT JOIN FETCH t.todoList l
@@ -26,12 +29,24 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
               CASE WHEN t.deadline IS NULL THEN 1 ELSE 0 END,
               t.deadline ASC,
               t.todoId DESC
-            """)
-    List<Todo> findTodos(
+            """,
+            countQuery = """
+            SELECT COUNT(t)
+            FROM Todo t
+            LEFT JOIN t.todoList l
+            LEFT JOIN t.category c
+            WHERE t.userId = :userId
+              AND (:completed IS NULL OR t.completed = :completed)
+              AND (:listId IS NULL OR l.listId = :listId)
+              AND (:categoryId IS NULL OR c.categoryId = :categoryId)
+            """
+    )
+    Page<Todo> findTodos(
             @Param("userId") Long userId,
             @Param("completed") Boolean completed,
             @Param("listId") Long listId,
-            @Param("categoryId") Long categoryId
+            @Param("categoryId") Long categoryId,
+            Pageable pageable
     );
 
     Optional<Todo> findByTodoIdAndUserId(

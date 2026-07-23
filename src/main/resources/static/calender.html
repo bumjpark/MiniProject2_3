@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Mini9 캘린더">
+  <title>캘린더 — Mini9</title>
+  <link rel="stylesheet" href="/users/app.css">
+  <script src="/users/app.js"></script>
+  <script>Mini9.requireAuth();</script>
+</head>
+<body>
+  <a class="skip-link" href="#main">본문으로 이동</a>
+  <div data-site-header></div>
+
+  <main id="main" class="page">
+    <div class="page-heading">
+      <div>
+        <p class="eyebrow">Calendar</p>
+        <h1>캘린더</h1>
+        <p class="lead">함께 보는 일정과 나의 계획을 월간 흐름으로 확인하세요.</p>
+      </div>
+      <div class="btn-row">
+        <a class="btn btn--quiet" id="memberLink" href="calendermembermanage.html">멤버 관리</a>
+        <a class="btn" id="scheduleLink" href="scadule.html">＋ 새 일정</a>
+      </div>
+    </div>
+
+    <div id="status" class="status-strip status-strip--error" role="alert" hidden></div>
+
+    <div class="sidebar-layout">
+      <aside class="card sticky-panel">
+        <div class="card__header">
+          <div>
+            <p class="eyebrow">My calendars</p>
+            <h2>나의 캘린더</h2>
+          </div>
+        </div>
+        <div class="card__body">
+          <div class="calendar-list" id="calendarList">
+            <div class="skeleton"></div>
+            <div class="skeleton" style="width:82%"></div>
+          </div>
+          <button class="btn btn--compact btn--outline" id="createCalendarButton"
+                  style="width:100%;margin-top:18px" type="button">＋ 캘린더 추가</button>
+        </div>
+        <div class="card__footer" id="calendarActions" hidden>
+          <div class="btn-row">
+            <button class="btn btn--compact btn--text" id="renameCalendarButton" type="button">이름 변경</button>
+            <button class="btn btn--compact btn--text" id="deleteCalendarButton"
+                    style="color:#d70015" type="button">삭제</button>
+          </div>
+        </div>
+      </aside>
+
+      <section class="card calendar-shell">
+        <div class="calendar-head">
+          <div class="btn-row">
+            <button class="icon-btn" id="prevMonth" type="button" aria-label="이전 달">‹</button>
+            <button class="icon-btn" id="nextMonth" type="button" aria-label="다음 달">›</button>
+            <button class="btn btn--compact btn--quiet" id="todayButton" type="button">오늘</button>
+          </div>
+          <h2 id="monthTitle">—</h2>
+          <span class="badge badge--blue" id="calendarName">캘린더 선택</span>
+        </div>
+        <div class="calendar-week" aria-hidden="true">
+          <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+        </div>
+        <div class="calendar-grid" id="calendarGrid"></div>
+      </section>
+    </div>
+  </main>
+
+  <dialog class="dialog" id="calendarDialog">
+    <form id="calendarForm">
+      <div class="dialog__body">
+        <p class="eyebrow" id="dialogEyebrow">New calendar</p>
+        <h2 id="dialogTitle">캘린더 추가</h2>
+        <div class="field" style="margin-top:20px">
+          <label for="calendarInput">캘린더 이름</label>
+          <input class="input" id="calendarInput" maxlength="100" placeholder="예: 팀 캘린더" required>
+        </div>
+        <div class="field" id="memberField" style="margin-top:16px">
+          <label for="memberIds">초대할 사용자 ID</label>
+          <input class="input" id="memberIds" inputmode="numeric" placeholder="예: 2, 5, 8">
+          <p class="field__hint">쉼표로 구분하세요. 본인은 자동으로 멤버에 포함됩니다.</p>
+        </div>
+      </div>
+      <div class="dialog__actions">
+        <button class="btn btn--compact btn--quiet" id="calendarCancel" type="button">취소</button>
+        <button class="btn btn--compact" id="calendarSubmit" type="submit">추가</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script>
+    const statusElement = document.querySelector("#status");
+    const calendarList = document.querySelector("#calendarList");
+    const calendarGrid = document.querySelector("#calendarGrid");
+    const calendarDialog = document.querySelector("#calendarDialog");
+    const calendarForm = document.querySelector("#calendarForm");
+    const state = {
+      calendars: [],
+      calendarId: Mini9.selectedCalendarId(),
+      schedules: [],
+      month: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+      dialogMode: "create"
+    };
+
+    function updateLinks() {
+      const suffix = state.calendarId ? `?calendarId=${state.calendarId}` : "";
+      document.querySelector("#memberLink").href = "calendermembermanage.html" + suffix;
+      document.querySelector("#scheduleLink").href = "scadule.html" + suffix;
+    }
+
+    function renderCalendarChoices() {
+      if (!state.calendars.length) {
+        calendarList.innerHTML = `
+          <div class="empty" style="min-height:130px;padding:16px 4px">
+            <div><h3>캘린더가 없습니다</h3><p>새 캘린더를 만들어 일정을 시작하세요.</p></div>
+          </div>`;
+        document.querySelector("#calendarActions").hidden = true;
+        return;
+      }
+      calendarList.innerHTML = state.calendars.map((calendar) => `
+        <button class="calendar-choice" type="button" data-calendar="${calendar.calendarId}"
+                aria-pressed="${String(String(calendar.calendarId) === String(state.calendarId))}">
+          ${Mini9.escapeHtml(calendar.name)}
+          <span class="muted tiny" style="display:block">${calendar.members.length}명</span>
+        </button>`).join("");
+      document.querySelector("#calendarActions").hidden = false;
+    }
+
+    function sameDate(a, b) {
+      return a.getFullYear() === b.getFullYear()
+        && a.getMonth() === b.getMonth()
+        && a.getDate() === b.getDate();
+    }
+
+    function renderMonth() {
+      document.querySelector("#monthTitle").textContent =
+        new Intl.DateTimeFormat("ko-KR", { year: "numeric", month: "long" }).format(state.month);
+      const year = state.month.getFullYear();
+      const month = state.month.getMonth();
+      const first = new Date(year, month, 1);
+      const start = new Date(year, month, 1 - first.getDay());
+      const today = new Date();
+      const cells = [];
+      for (let index = 0; index < 42; index += 1) {
+        const date = new Date(start);
+        date.setDate(start.getDate() + index);
+        const dateKey = [
+          date.getFullYear(),
+          String(date.getMonth() + 1).padStart(2, "0"),
+          String(date.getDate()).padStart(2, "0")
+        ].join("-");
+        const events = state.schedules.filter((schedule) =>
+          schedule.startDateTime && schedule.startDateTime.slice(0, 10) === dateKey
+        );
+        cells.push(`
+          <div class="calendar-day ${date.getMonth() !== month ? "calendar-day--outside" : ""}
+                      ${sameDate(date, today) ? "calendar-day--today" : ""}">
+            <span class="calendar-day__number">${date.getDate()}</span>
+            ${events.slice(0, 3).map((event) => `
+              <a class="calendar-event" data-label="${event.label || "BLUE"}"
+                 href="scadule.html?calendarId=${state.calendarId}&scheduleId=${event.scheduleId}"
+                 title="${Mini9.escapeHtml(event.title)}">
+                ${Mini9.escapeHtml(event.title)}
+              </a>`).join("")}
+            ${events.length > 3 ? `<span class="tiny muted">+${events.length - 3}개</span>` : ""}
+          </div>`);
+      }
+      calendarGrid.innerHTML = cells.join("");
+    }
+
+    async function loadSchedules() {
+      if (!state.calendarId) {
+        state.schedules = [];
+        document.querySelector("#calendarName").textContent = "캘린더 선택";
+        renderMonth();
+        return;
+      }
+      try {
+        state.schedules = await Mini9.api(`/calendars/${state.calendarId}/schedules`);
+        const current = state.calendars.find((item) => String(item.calendarId) === String(state.calendarId));
+        document.querySelector("#calendarName").textContent = current?.name || "캘린더";
+        Mini9.setSelectedCalendarId(state.calendarId);
+        updateLinks();
+        renderCalendarChoices();
+        renderMonth();
+      } catch (error) {
+        Mini9.showStatus(statusElement, error.message, "error");
+      }
+    }
+
+    async function loadCalendars() {
+      Mini9.showStatus(statusElement, "");
+      try {
+        state.calendars = await Mini9.api("/calendars");
+        if (!state.calendars.some((item) => String(item.calendarId) === String(state.calendarId))) {
+          state.calendarId = state.calendars[0]?.calendarId || "";
+        }
+        renderCalendarChoices();
+        updateLinks();
+        await loadSchedules();
+      } catch (error) {
+        Mini9.showStatus(statusElement, error.message, "error");
+        calendarList.innerHTML = `<p class="muted small">${Mini9.escapeHtml(error.message)}</p>`;
+        renderMonth();
+      }
+    }
+
+    calendarList.addEventListener("click", (event) => {
+      const choice = event.target.closest("[data-calendar]");
+      if (!choice) return;
+      state.calendarId = choice.dataset.calendar;
+      loadSchedules();
+    });
+
+    document.querySelector("#prevMonth").addEventListener("click", () => {
+      state.month = new Date(state.month.getFullYear(), state.month.getMonth() - 1, 1);
+      renderMonth();
+    });
+    document.querySelector("#nextMonth").addEventListener("click", () => {
+      state.month = new Date(state.month.getFullYear(), state.month.getMonth() + 1, 1);
+      renderMonth();
+    });
+    document.querySelector("#todayButton").addEventListener("click", () => {
+      state.month = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+      renderMonth();
+    });
+
+    function openCalendarDialog(mode) {
+      state.dialogMode = mode;
+      const editing = mode === "edit";
+      const current = state.calendars.find((item) => String(item.calendarId) === String(state.calendarId));
+      document.querySelector("#dialogEyebrow").textContent = editing ? "Rename calendar" : "New calendar";
+      document.querySelector("#dialogTitle").textContent = editing ? "캘린더 이름 변경" : "캘린더 추가";
+      document.querySelector("#calendarSubmit").textContent = editing ? "저장" : "추가";
+      document.querySelector("#memberField").hidden = editing;
+      document.querySelector("#calendarInput").value = editing ? current?.name || "" : "";
+      document.querySelector("#memberIds").value = "";
+      calendarDialog.showModal();
+      document.querySelector("#calendarInput").focus();
+    }
+
+    document.querySelector("#createCalendarButton").addEventListener("click", () => openCalendarDialog("create"));
+    document.querySelector("#renameCalendarButton").addEventListener("click", () => openCalendarDialog("edit"));
+    document.querySelector("#calendarCancel").addEventListener("click", () => calendarDialog.close());
+    calendarForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const name = document.querySelector("#calendarInput").value.trim();
+      try {
+        if (state.dialogMode === "edit") {
+          await Mini9.api(`/calendars/${state.calendarId}`, {
+            method: "PUT",
+            body: JSON.stringify({ name, memberIds: null })
+          });
+          Mini9.toast("캘린더 이름을 변경했습니다.");
+        } else {
+          const memberIds = document.querySelector("#memberIds").value
+            .split(",").map((value) => value.trim()).filter(Boolean).map(Number);
+          const created = await Mini9.api("/calendars", {
+            method: "POST",
+            body: JSON.stringify({ name, memberIds })
+          });
+          state.calendarId = created.calendarId;
+          Mini9.toast("캘린더를 추가했습니다.");
+        }
+        calendarDialog.close();
+        await loadCalendars();
+      } catch (error) {
+        Mini9.toast(error.message, "error");
+      }
+    });
+
+    document.querySelector("#deleteCalendarButton").addEventListener("click", async () => {
+      const current = state.calendars.find((item) => String(item.calendarId) === String(state.calendarId));
+      if (!current) return;
+      const confirmed = await Mini9.confirmAction({
+        title: "캘린더를 삭제할까요?",
+        message: `'${current.name}'과 그 안의 일정이 삭제됩니다. 연결된 할 일은 유지되고 일정 연결만 해제됩니다.`,
+        confirmText: "캘린더 삭제",
+        danger: true
+      });
+      if (!confirmed) return;
+      try {
+        await Mini9.api(`/calendars/${state.calendarId}`, { method: "DELETE" });
+        Mini9.setSelectedCalendarId("");
+        state.calendarId = "";
+        Mini9.toast("캘린더를 삭제했습니다.");
+        await loadCalendars();
+      } catch (error) {
+        Mini9.toast(error.message, "error");
+      }
+    });
+
+    renderMonth();
+    loadCalendars();
+  </script>
+</body>
+</html>

@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Mini9 일정 관리">
+  <title>일정 — Mini9</title>
+  <link rel="stylesheet" href="/users/app.css">
+  <script src="/users/app.js"></script>
+  <script>Mini9.requireAuth();</script>
+</head>
+<body>
+  <a class="skip-link" href="#main">본문으로 이동</a>
+  <div data-site-header></div>
+
+  <main id="main" class="page">
+    <div class="page-heading">
+      <div>
+        <p class="eyebrow">Schedules</p>
+        <h1>일정</h1>
+        <p class="lead">캘린더별 일정을 만들고 시간과 색상 라벨을 정리하세요.</p>
+      </div>
+      <a class="btn btn--quiet" id="calendarLink" href="calender.html">월간 캘린더</a>
+    </div>
+
+    <div id="status" class="status-strip status-strip--error" role="alert" hidden></div>
+
+    <div class="grid grid--2" style="grid-template-columns:minmax(320px,.82fr) minmax(0,1.18fr)">
+      <section class="card sticky-panel">
+        <div class="card__header">
+          <div>
+            <p class="eyebrow" id="formEyebrow">New schedule</p>
+            <h2 id="formTitle">새 일정</h2>
+          </div>
+          <button class="btn btn--compact btn--text" id="resetFormButton" type="button" hidden>새 일정</button>
+        </div>
+        <div class="card__body">
+          <form id="scheduleForm">
+            <div class="field">
+              <label for="calendarSelect">캘린더</label>
+              <select class="select" id="calendarSelect" required>
+                <option value="">캘린더를 불러오는 중…</option>
+              </select>
+            </div>
+            <div class="field" style="margin-top:16px">
+              <label for="title">일정 제목</label>
+              <input class="input" id="title" maxlength="255" placeholder="예: 주간 회의" required>
+            </div>
+            <div class="form-grid" style="margin-top:16px">
+              <div class="field">
+                <label for="startDateTime">시작</label>
+                <input class="input" id="startDateTime" type="datetime-local">
+              </div>
+              <div class="field">
+                <label for="endDateTime">종료</label>
+                <input class="input" id="endDateTime" type="datetime-local">
+              </div>
+            </div>
+            <div class="field" style="margin-top:16px">
+              <label for="label">색상 라벨</label>
+              <select class="select" id="label">
+                <option value="">라벨 없음</option>
+                <option value="RED">빨강</option>
+                <option value="ORANGE">주황</option>
+                <option value="YELLOW">노랑</option>
+                <option value="GREEN">초록</option>
+                <option value="BLUE">파랑</option>
+                <option value="PURPLE">보라</option>
+                <option value="PINK">분홍</option>
+                <option value="GRAY">회색</option>
+              </select>
+            </div>
+            <p class="field__hint" style="margin-top:12px">
+              시간을 비우면 서버가 현재 시각을 기준으로 1시간 일정을 만듭니다.
+            </p>
+            <button class="btn" id="submitButton" style="width:100%;margin-top:22px" type="submit">일정 추가</button>
+          </form>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card__header">
+          <div>
+            <p class="eyebrow">Upcoming</p>
+            <h2>캘린더 일정 <span class="muted" id="scheduleCount"></span></h2>
+          </div>
+          <button class="btn btn--compact btn--quiet" id="refreshButton" type="button">새로고침</button>
+        </div>
+        <div id="scheduleContent">
+          <div class="empty"><div class="skeleton" style="width:260px"></div></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const statusElement = document.querySelector("#status");
+    const select = document.querySelector("#calendarSelect");
+    const content = document.querySelector("#scheduleContent");
+    const form = document.querySelector("#scheduleForm");
+    const state = {
+      calendars: [],
+      calendarId: Mini9.selectedCalendarId(),
+      schedules: [],
+      editingId: null
+    };
+
+    function selectedCalendarSuffix() {
+      return state.calendarId ? `?calendarId=${state.calendarId}` : "";
+    }
+
+    function resetForm() {
+      state.editingId = null;
+      form.reset();
+      select.value = state.calendarId;
+      document.querySelector("#formEyebrow").textContent = "New schedule";
+      document.querySelector("#formTitle").textContent = "새 일정";
+      document.querySelector("#submitButton").textContent = "일정 추가";
+      document.querySelector("#resetFormButton").hidden = true;
+      history.replaceState(null, "", "scadule.html" + selectedCalendarSuffix());
+    }
+
+    function editSchedule(schedule) {
+      state.editingId = schedule.scheduleId;
+      document.querySelector("#title").value = schedule.title;
+      document.querySelector("#startDateTime").value = Mini9.localDateTimeValue(schedule.startDateTime);
+      document.querySelector("#endDateTime").value = Mini9.localDateTimeValue(schedule.endDateTime);
+      document.querySelector("#label").value = schedule.label || "";
+      document.querySelector("#formEyebrow").textContent = "Edit schedule";
+      document.querySelector("#formTitle").textContent = "일정 수정";
+      document.querySelector("#submitButton").textContent = "변경사항 저장";
+      document.querySelector("#resetFormButton").hidden = false;
+      history.replaceState(
+        null, "",
+        `scadule.html?calendarId=${state.calendarId}&scheduleId=${schedule.scheduleId}`
+      );
+      document.querySelector("#title").focus();
+      scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function renderSchedules() {
+      document.querySelector("#scheduleCount").textContent = `· ${state.schedules.length}개`;
+      if (!state.calendarId) {
+        content.innerHTML = `<div class="empty"><div>
+          <div class="empty__mark">＋</div><h3>캘린더가 필요합니다</h3>
+          <p>캘린더를 먼저 만든 뒤 일정을 추가해주세요.</p>
+          <a class="btn btn--compact" href="calender.html">캘린더 만들기</a>
+        </div></div>`;
+        return;
+      }
+      if (!state.schedules.length) {
+        content.innerHTML = `<div class="empty"><div>
+          <div class="empty__mark">○</div><h3>아직 일정이 없습니다</h3>
+          <p>왼쪽 양식에서 첫 일정을 추가해보세요.</p>
+        </div></div>`;
+        return;
+      }
+      const sorted = [...state.schedules].sort((a, b) =>
+        String(a.startDateTime).localeCompare(String(b.startDateTime))
+      );
+      content.innerHTML = `<ul class="list">${sorted.map((schedule) => `
+        <li class="list-row">
+          <span class="badge badge--blue" style="min-width:46px;justify-content:center">
+            ${Mini9.escapeHtml(schedule.label || "NONE")}
+          </span>
+          <div class="list-row__main">
+            <p class="list-row__title">${Mini9.escapeHtml(schedule.title)}</p>
+            <div class="list-row__meta">
+              <span>${Mini9.formatDateTime(schedule.startDateTime)}</span>
+              <span>→ ${Mini9.formatDateTime(schedule.endDateTime)}</span>
+            </div>
+          </div>
+          <div class="list-row__actions">
+            <button class="icon-btn" type="button" data-edit="${schedule.scheduleId}" aria-label="일정 수정">✎</button>
+            <button class="icon-btn icon-btn--danger" type="button" data-delete="${schedule.scheduleId}"
+                    aria-label="일정 삭제">×</button>
+          </div>
+        </li>`).join("")}</ul>`;
+    }
+
+    async function loadSchedules() {
+      document.querySelector("#calendarLink").href = "calender.html" + selectedCalendarSuffix();
+      if (!state.calendarId) {
+        state.schedules = [];
+        renderSchedules();
+        return;
+      }
+      try {
+        state.schedules = await Mini9.api(`/calendars/${state.calendarId}/schedules`);
+        renderSchedules();
+        const requestedId = new URLSearchParams(location.search).get("scheduleId");
+        if (requestedId && !state.editingId) {
+          const schedule = state.schedules.find((item) => String(item.scheduleId) === requestedId);
+          if (schedule) editSchedule(schedule);
+        }
+      } catch (error) {
+        Mini9.showStatus(statusElement, error.message, "error");
+      }
+    }
+
+    async function loadCalendars() {
+      try {
+        state.calendars = await Mini9.api("/calendars");
+        if (!state.calendars.some((item) => String(item.calendarId) === String(state.calendarId))) {
+          state.calendarId = state.calendars[0]?.calendarId || "";
+        }
+        select.innerHTML = state.calendars.length
+          ? state.calendars.map((item) =>
+              `<option value="${item.calendarId}">${Mini9.escapeHtml(item.name)}</option>`).join("")
+          : `<option value="">캘린더 없음</option>`;
+        select.value = state.calendarId;
+        await loadSchedules();
+      } catch (error) {
+        Mini9.showStatus(statusElement, error.message, "error");
+      }
+    }
+
+    select.addEventListener("change", () => {
+      state.calendarId = select.value;
+      Mini9.setSelectedCalendarId(state.calendarId);
+      resetForm();
+      loadSchedules();
+    });
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!state.calendarId) {
+        Mini9.toast("먼저 캘린더를 만들어주세요.", "error");
+        return;
+      }
+      const start = document.querySelector("#startDateTime").value || null;
+      const end = document.querySelector("#endDateTime").value || null;
+      if (start && end && new Date(end) < new Date(start)) {
+        Mini9.toast("종료 시각은 시작 시각보다 빠를 수 없습니다.", "error");
+        return;
+      }
+      const button = document.querySelector("#submitButton");
+      button.disabled = true;
+      try {
+        await Mini9.api(
+          `/calendars/${state.calendarId}/schedules${state.editingId ? `/${state.editingId}` : ""}`,
+          {
+            method: state.editingId ? "PUT" : "POST",
+            body: JSON.stringify({
+              title: document.querySelector("#title").value.trim(),
+              startDateTime: start,
+              endDateTime: end,
+              label: document.querySelector("#label").value || null
+            })
+          }
+        );
+        Mini9.toast(state.editingId ? "일정을 수정했습니다." : "일정을 추가했습니다.");
+        resetForm();
+        await loadSchedules();
+      } catch (error) {
+        Mini9.toast(error.message, "error");
+      } finally {
+        button.disabled = false;
+      }
+    });
+
+    content.addEventListener("click", async (event) => {
+      const edit = event.target.closest("[data-edit]");
+      if (edit) {
+        const schedule = state.schedules.find((item) => String(item.scheduleId) === edit.dataset.edit);
+        if (schedule) editSchedule(schedule);
+        return;
+      }
+      const remove = event.target.closest("[data-delete]");
+      if (!remove) return;
+      const confirmed = await Mini9.confirmAction({
+        title: "일정을 삭제할까요?",
+        message: "일정은 삭제되지만 연결된 할 일은 유지되며 일정 연결만 해제됩니다.",
+        confirmText: "일정 삭제",
+        danger: true
+      });
+      if (!confirmed) return;
+      try {
+        await Mini9.api(`/calendars/${state.calendarId}/schedules/${remove.dataset.delete}`, {
+          method: "DELETE"
+        });
+        if (String(state.editingId) === remove.dataset.delete) resetForm();
+        Mini9.toast("일정을 삭제했습니다.");
+        await loadSchedules();
+      } catch (error) {
+        Mini9.toast(error.message, "error");
+      }
+    });
+
+    document.querySelector("#resetFormButton").addEventListener("click", resetForm);
+    document.querySelector("#refreshButton").addEventListener("click", loadSchedules);
+    loadCalendars();
+  </script>
+</body>
+</html>

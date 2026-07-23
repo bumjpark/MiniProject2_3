@@ -3,7 +3,11 @@ package com.example.demo.todo.service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,6 +18,7 @@ import com.example.demo.calendar.entity.Schedule;
 import com.example.demo.calendar.repository.ScheduleRepository;
 import com.example.demo.calendar.service.ScheduleService;
 import com.example.demo.todo.dto.TodoCreateRequest;
+import com.example.demo.todo.dto.TodoPageResponse;
 import com.example.demo.todo.dto.TodoResponse;
 import com.example.demo.todo.dto.TodoUpdateRequest;
 import com.example.demo.todo.entity.Category;
@@ -29,6 +34,9 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class TodoService {
+
+    private static final Set<Integer> ALLOWED_PAGE_SIZES =
+            Set.of(10, 20, 50, 100);
 
     private final TodoRepository todoRepository;
     private final TodoListRepository todoListRepository;
@@ -57,6 +65,58 @@ public class TodoService {
             Long listId,
             Long categoryId
     ) {
+        return findTodos(
+                        userId,
+                        completed,
+                        listId,
+                        categoryId,
+                        Pageable.unpaged()
+                )
+                .stream()
+                .map(TodoResponse::from)
+                .toList();
+    }
+
+    public TodoPageResponse getTodos(
+            Long userId,
+            Boolean completed,
+            Long listId,
+            Long categoryId,
+            int page,
+            int size
+    ) {
+        if (page < 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "페이지 번호는 0 이상이어야 합니다."
+            );
+        }
+
+        if (!ALLOWED_PAGE_SIZES.contains(size)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "페이지 크기는 10, 20, 50, 100 중 하나여야 합니다."
+            );
+        }
+
+        Page<TodoResponse> todoPage = findTodos(
+                userId,
+                completed,
+                listId,
+                categoryId,
+                PageRequest.of(page, size)
+        ).map(TodoResponse::from);
+
+        return TodoPageResponse.from(todoPage);
+    }
+
+    private Page<Todo> findTodos(
+            Long userId,
+            Boolean completed,
+            Long listId,
+            Long categoryId,
+            Pageable pageable
+    ) {
         validateUserId(userId);
 
         if (listId != null) {
@@ -68,14 +128,12 @@ public class TodoService {
         }
 
         return todoRepository.findTodos(
-                        userId,
-                        completed,
-                        listId,
-                        categoryId
-                )
-                .stream()
-                .map(TodoResponse::from)
-                .toList();
+                userId,
+                completed,
+                listId,
+                categoryId,
+                pageable
+        );
     }
 
     @Transactional
