@@ -30,7 +30,9 @@ public record TodoResponse(
         @Schema(description = "완료 여부", example = "false")
         boolean completed,
         @Schema(description = "오늘부터 마감일까지 남은 일수", example = "8")
-        Long remainingDays
+        Long remainingDays,
+        @Schema(description = "연결된 캘린더의 일정(Schedule) ID. 연결된 일정이 없으면 null", example = "1")
+        Long scheduleId
 ) {
 
     public static TodoResponse from(Todo todo) {
@@ -55,7 +57,8 @@ public record TodoResponse(
                 todo.getContent(),
                 todo.getDeadline(),
                 todo.isCompleted(),
-                remainingDays
+                remainingDays,
+                todo.getScheduleId()
         );
     }
 }

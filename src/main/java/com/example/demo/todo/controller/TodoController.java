@@ -67,7 +67,7 @@ public class TodoController {
     }
 
     @PostMapping
-    @Operation(summary = "Todo 생성", description = "TodoList와 카테고리는 선택 사항입니다.")
+    @Operation(summary = "Todo 생성", description = "TodoList와 카테고리, CalenderId는 선택 사항입니다.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "생성 성공"),
             @ApiResponse(responseCode = "400", description = "잘못된 요청"),

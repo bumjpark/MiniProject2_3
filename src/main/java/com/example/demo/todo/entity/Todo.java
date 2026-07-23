@@ -58,6 +58,10 @@ public class Todo {
     @Column(name = "todo_completed", nullable = false)
     private boolean completed;
 
+    // 생성 시 캘린더에도 일정을 같이 만들었다면, 그 Schedule의 id (calendar 패키지 소유, FK 매핑 없이 순수 참조)
+    @Column(name = "schedule_id")
+    private Long scheduleId;
+
     public Todo(
             Long userId,
             TodoList todoList,
@@ -91,5 +95,9 @@ public class Todo {
 
     public void changeCategory(Category category) {
         this.category = category;
+    }
+
+    public void linkSchedule(Long scheduleId) {
+        this.scheduleId = scheduleId;
     }
 }

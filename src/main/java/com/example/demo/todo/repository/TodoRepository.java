@@ -39,6 +39,17 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
             Long userId
     );
 
+    Optional<Todo> findByScheduleId(Long scheduleId);
+
+    // 연결된 Schedule이 지워져도 Todo 자체는 남기고 연결만 끊는다.
+    @Modifying(flushAutomatically = true)
+    @Query("""
+            UPDATE Todo t
+            SET t.scheduleId = NULL
+            WHERE t.scheduleId IN :scheduleIds
+            """)
+    void unlinkByScheduleIdIn(@Param("scheduleIds") List<Long> scheduleIds);
+
     @Modifying(flushAutomatically = true)
     @Query("""
             UPDATE Todo t

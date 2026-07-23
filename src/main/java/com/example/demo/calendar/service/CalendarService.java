@@ -3,8 +3,10 @@ package com.example.demo.calendar.service;
 import com.example.demo.auth.entity.User;
 import com.example.demo.auth.repository.UserRepository;
 import com.example.demo.calendar.entity.Calendar;
+import com.example.demo.calendar.entity.Schedule;
 import com.example.demo.calendar.repository.CalendarRepository;
 import com.example.demo.calendar.repository.ScheduleRepository;
+import com.example.demo.todo.repository.TodoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -22,6 +24,7 @@ public class CalendarService {
     private final CalendarRepository calendarRepository;
     private final UserRepository userRepository;
     private final ScheduleRepository scheduleRepository;
+    private final TodoRepository todoRepository;
     private final CurrentUserResolver currentUserResolver;
 
     public Calendar create(String name, List<Long> memberIds) {
@@ -72,6 +75,15 @@ public class CalendarService {
     @Transactional
     public void delete(Long calendarId) {
         getById(calendarId);
+
+        // 캘린더(와 소속 일정들)를 지운다고 남의 Todo까지 사라지면 안 되니, Todo는 남기고 연결만 끊는다.
+        List<Long> scheduleIds = scheduleRepository.findByCalendarId(calendarId).stream()
+                .map(Schedule::getScheduleId)
+                .toList();
+        if (!scheduleIds.isEmpty()) {
+            todoRepository.unlinkByScheduleIdIn(scheduleIds);
+        }
+
         scheduleRepository.deleteByCalendarId(calendarId);
         calendarRepository.deleteById(calendarId);
     }
