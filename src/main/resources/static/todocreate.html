@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Mini9 새 할 일 만들기">
+  <title>새 할 일 — Mini9</title>
+  <link rel="stylesheet" href="/users/app.css">
+  <script src="/users/app.js"></script>
+  <script>Mini9.requireAuth();</script>
+</head>
+<body>
+  <a class="skip-link" href="#main">본문으로 이동</a>
+  <div data-site-header></div>
+
+  <main id="main" class="page page--narrow">
+    <div class="page-heading">
+      <div>
+        <p class="eyebrow">New todo</p>
+        <h1>새 할 일</h1>
+        <p class="lead">해야 할 일을 적고 필요한 정보만 더하세요.</p>
+      </div>
+      <a class="btn btn--quiet" href="todo.html">취소</a>
+    </div>
+
+    <section class="card">
+      <div class="card__body">
+        <div id="status" class="status-strip" role="alert" hidden></div>
+        <form id="todoForm">
+          <div class="form-grid">
+            <div class="field field--full">
+              <label for="content">할 일</label>
+              <textarea class="textarea" id="content" name="content" maxlength="255"
+                        placeholder="무엇을 해야 하나요?" required autofocus></textarea>
+              <p class="field__hint"><span id="contentCount">0</span>/255자</p>
+            </div>
+            <div class="field">
+              <label for="listId">목록</label>
+              <select class="select" id="listId" name="listId">
+                <option value="">목록 없음</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="categoryId">카테고리</label>
+              <select class="select" id="categoryId" name="categoryId">
+                <option value="">카테고리 없음</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="deadline">마감일</label>
+              <input class="input" id="deadline" name="deadline" type="date">
+              <p class="field__hint">오늘 이후의 날짜만 선택할 수 있습니다.</p>
+            </div>
+            <div class="field">
+              <label for="calendarId">일정도 함께 만들기</label>
+              <select class="select" id="calendarId" name="calendarId">
+                <option value="">일정 만들지 않음</option>
+              </select>
+              <p class="field__hint">선택한 캘린더에 연결된 일정이 함께 생성됩니다.</p>
+            </div>
+          </div>
+          <div class="btn-row" style="margin-top:28px;justify-content:flex-end">
+            <a class="btn btn--quiet" href="todo.html">돌아가기</a>
+            <button class="btn" id="submitButton" type="submit">할 일 추가</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section class="card" style="margin-top:20px">
+      <div class="card__body" style="display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap">
+        <div>
+          <h3>분류가 더 필요한가요?</h3>
+          <p class="muted small" style="margin-bottom:0">목록은 별도 관리 화면에서, 카테고리는 여기서 바로 추가할 수 있습니다.</p>
+        </div>
+        <div class="btn-row">
+          <a class="btn btn--compact btn--quiet" href="todolist.html">목록 관리</a>
+          <button class="btn btn--compact btn--outline" id="categoryButton" type="button">카테고리 추가</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <dialog class="dialog" id="categoryDialog">
+    <form id="categoryForm">
+      <div class="dialog__body">
+        <p class="eyebrow">New category</p>
+        <h2>카테고리 추가</h2>
+        <div class="field" style="margin-top:20px">
+          <label for="categoryName">카테고리 이름</label>
+          <input class="input" id="categoryName" maxlength="50" placeholder="예: 중요" required>
+        </div>
+      </div>
+      <div class="dialog__actions">
+        <button class="btn btn--compact btn--quiet" id="categoryCancel" type="button">취소</button>
+        <button class="btn btn--compact" type="submit">추가</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script>
+    const form = document.querySelector("#todoForm");
+    const status = document.querySelector("#status");
+    const categoryDialog = document.querySelector("#categoryDialog");
+    document.querySelector("#deadline").min = Mini9.todayValue();
+
+    function option(value, text) {
+      return `<option value="${value}">${Mini9.escapeHtml(text)}</option>`;
+    }
+
+    async function loadOptions() {
+      try {
+        const [lists, categories, calendars] = await Promise.all([
+          Mini9.api("/api/todo-lists"),
+          Mini9.api("/api/categories"),
+          Mini9.api("/calendars")
+        ]);
+        document.querySelector("#listId").insertAdjacentHTML(
+          "beforeend", lists.map((item) => option(item.listId, item.listName)).join("")
+        );
+        document.querySelector("#categoryId").insertAdjacentHTML(
+          "beforeend", categories.map((item) => option(item.categoryId, item.categoryName)).join("")
+        );
+        document.querySelector("#calendarId").insertAdjacentHTML(
+          "beforeend", calendars.map((item) => option(item.calendarId, item.name)).join("")
+        );
+        const initialList = new URLSearchParams(location.search).get("listId");
+        if (initialList) document.querySelector("#listId").value = initialList;
+      } catch (error) {
+        Mini9.showStatus(status, "선택 항목 일부를 불러오지 못했습니다. " + error.message, "error");
+      }
+    }
+
+    document.querySelector("#content").addEventListener("input", (event) => {
+      document.querySelector("#contentCount").textContent = event.target.value.length;
+    });
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const button = document.querySelector("#submitButton");
+      button.disabled = true;
+      button.textContent = "추가 중…";
+      Mini9.showStatus(status, "");
+      const valueOrNull = (value) => value ? Number(value) : null;
+      try {
+        await Mini9.api("/api/todos", {
+          method: "POST",
+          body: JSON.stringify({
+            listId: valueOrNull(form.listId.value),
+            categoryId: valueOrNull(form.categoryId.value),
+            content: form.content.value.trim(),
+            deadline: form.deadline.value || null,
+            calendarId: valueOrNull(form.calendarId.value)
+          })
+        });
+        Mini9.toast("할 일을 추가했습니다.");
+        location.replace("todo.html");
+      } catch (error) {
+        Mini9.showStatus(status, error.message, "error");
+      } finally {
+        button.disabled = false;
+        button.textContent = "할 일 추가";
+      }
+    });
+
+    document.querySelector("#categoryButton").addEventListener("click", () => categoryDialog.showModal());
+    document.querySelector("#categoryCancel").addEventListener("click", () => categoryDialog.close());
+    document.querySelector("#categoryForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      try {
+        const created = await Mini9.api("/api/categories", {
+          method: "POST",
+          body: JSON.stringify({ categoryName: document.querySelector("#categoryName").value.trim() })
+        });
+        document.querySelector("#categoryId").insertAdjacentHTML(
+          "beforeend", option(created.categoryId, created.categoryName)
+        );
+        document.querySelector("#categoryId").value = created.categoryId;
+        categoryDialog.close();
+        event.target.reset();
+        Mini9.toast("카테고리를 추가했습니다.");
+      } catch (error) {
+        Mini9.toast(error.message, "error");
+      }
+    });
+
+    loadOptions();
+  </script>
+</body>
+</html>

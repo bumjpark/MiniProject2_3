@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Mini9 로그인">
+  <title>로그인 — Mini9</title>
+  <link rel="stylesheet" href="/users/app.css">
+</head>
+<body>
+  <main class="auth-page">
+    <div class="auth-shell">
+      <section class="auth-story" aria-label="Mini9 소개">
+        <a class="brand" href="home.html">
+          <span class="brand__mark">M9</span><span>Mini9</span>
+        </a>
+        <div>
+          <p class="eyebrow" style="color:#2997ff">Welcome back</p>
+          <h1>다시, 중요한 일에 집중하세요.</h1>
+          <p>할 일과 일정을 한 흐름으로 이어 오늘 해야 할 일을 놓치지 않도록 도와드립니다.</p>
+        </div>
+        <div class="auth-story__note">
+          <span>✓</span><span>JWT 기반으로 안전하게 인증합니다.</span>
+        </div>
+      </section>
+
+      <section class="auth-form">
+        <div class="auth-form__head">
+          <h2>로그인</h2>
+          <p>Mini9 작업 공간으로 돌아오세요.</p>
+        </div>
+        <div id="status" class="status-strip status-strip--error" role="alert" hidden></div>
+        <form id="loginForm">
+          <div class="field">
+            <label for="email">이메일</label>
+            <input class="input" id="email" name="email" type="email"
+                   autocomplete="email" placeholder="name@example.com" required autofocus>
+          </div>
+          <div class="field">
+            <label for="password">비밀번호</label>
+            <input class="input" id="password" name="password" type="password"
+                   autocomplete="current-password" placeholder="비밀번호를 입력하세요" required>
+          </div>
+          <button class="btn" id="submitButton" type="submit">로그인</button>
+        </form>
+        <p class="auth-form__foot">
+          처음이신가요? <a href="join.html">새 계정 만들기</a>
+          · <a href="home.html">홈으로</a>
+        </p>
+      </section>
+    </div>
+  </main>
+
+  <script src="/users/app.js"></script>
+  <script>
+    const form = document.querySelector("#loginForm");
+    const button = document.querySelector("#submitButton");
+    const status = document.querySelector("#status");
+
+    if (Mini9.accessToken()) {
+      const next = Mini9.safeNext(new URLSearchParams(location.search).get("next"));
+      location.replace(next);
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      Mini9.showStatus(status, "");
+      button.disabled = true;
+      button.textContent = "확인 중…";
+      try {
+        const result = await Mini9.api("/users/login", {
+          method: "POST",
+          body: JSON.stringify({
+            email: form.email.value.trim(),
+            password: form.password.value
+          })
+        });
+        Mini9.setTokens(result.token, result.refreshToken);
+        const next = Mini9.safeNext(new URLSearchParams(location.search).get("next"));
+        location.replace(next);
+      } catch (error) {
+        Mini9.showStatus(status, error.message || "이메일 또는 비밀번호를 확인해주세요.", "error");
+      } finally {
+        button.disabled = false;
+        button.textContent = "로그인";
+      }
+    });
+  </script>
+</body>
+</html>

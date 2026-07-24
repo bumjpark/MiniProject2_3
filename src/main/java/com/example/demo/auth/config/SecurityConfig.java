@@ -40,12 +40,28 @@ public class SecurityConfig {
             session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
 
-                .requestMatchers("/users/**",
-                				 "/login",
-                				 "/error",
-                				 "/swagger-ui/**",
-                				 "/swagger-ui.html",
-                				 "/v3/api-docs/**").permitAll()
+                .requestMatchers("/",
+                                 "/index.html",
+                                 "/home.html",
+                                 "/login.html",
+                                 "/join.html",
+                                 "/logout.html",
+                                 "/todo.html",
+                                 "/todolist.html",
+                                 "/todocreate.html",
+                                 "/calender.html",
+                                 "/calendermembermanage.html",
+                                 "/scadule.html",
+                                 "/users/login",
+                                 "/users/signup",
+                                 "/users/refresh",
+                                 "/users/app.css",
+                                 "/users/app.js",
+                                 "/login",
+                                 "/error",
+                                 "/swagger-ui/**",
+                                 "/swagger-ui.html",
+                                 "/v3/api-docs/**").permitAll()
                 .anyRequest().authenticated()
             )
         	.addFilterBefore(jwtFilter,

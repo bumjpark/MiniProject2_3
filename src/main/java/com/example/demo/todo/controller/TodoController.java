@@ -1,7 +1,5 @@
 package com.example.demo.todo.controller;
 
-import java.util.List;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -18,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.demo.auth.security.CustomUserDetails;
 import com.example.demo.todo.dto.TodoCreateRequest;
+import com.example.demo.todo.dto.TodoPageResponse;
 import com.example.demo.todo.dto.TodoResponse;
 import com.example.demo.todo.dto.TodoUpdateRequest;
 import com.example.demo.todo.service.TodoService;
@@ -28,6 +27,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -45,8 +45,11 @@ public class TodoController {
             summary = "Todo 목록 조회",
             description = "JWT 사용자의 Todo를 완료 상태, TodoList, 카테고리 조건으로 조회합니다."
     )
-    @ApiResponse(responseCode = "200", description = "조회 성공")
-    public ResponseEntity<List<TodoResponse>> getTodos(
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "조회 성공"),
+            @ApiResponse(responseCode = "400", description = "잘못된 페이지 번호 또는 허용되지 않은 페이지 크기")
+    })
+    public ResponseEntity<TodoPageResponse> getTodos(
             @Parameter(hidden = true)
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @Parameter(description = "완료 여부. 생략하면 전체 조회", example = "false")
@@ -54,14 +57,29 @@ public class TodoController {
             @Parameter(description = "TodoList ID. 생략하면 모든 목록 조회", example = "1")
             @RequestParam(name = "listId", required = false) Long listId,
             @Parameter(description = "카테고리 ID. 생략하면 모든 카테고리 조회", example = "1")
-            @RequestParam(name = "categoryId", required = false) Long categoryId
+            @RequestParam(name = "categoryId", required = false) Long categoryId,
+            @Parameter(
+                    description = "페이지 번호 (0부터 시작)",
+                    schema = @Schema(defaultValue = "0", minimum = "0")
+            )
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @Parameter(
+                    description = "페이지 크기",
+                    schema = @Schema(
+                            defaultValue = "20",
+                            allowableValues = {"10", "20", "50", "100"}
+                    )
+            )
+            @RequestParam(name = "size", defaultValue = "20") int size
     ) {
         return ResponseEntity.ok(
                 todoService.getTodos(
                         currentUserId(userDetails),
                         completed,
                         listId,
-                        categoryId
+                        categoryId,
+                        page,
+                        size
                 )
         );
     }
