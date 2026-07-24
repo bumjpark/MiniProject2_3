@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Mini9 캘린더 멤버 관리">
-  <title>캘린더 멤버 — Mini9</title>
+  <meta name="description" content="Planly 캘린더 멤버 관리">
+  <title>캘린더 멤버 — Planly</title>
   <link rel="stylesheet" href="/users/app.css">
   <script src="/users/app.js"></script>
-  <script>Mini9.requireAuth();</script>
+  <script>Planly.requireAuth();</script>
 </head>
 <body>
   <a class="skip-link" href="#main">본문으로 이동</a>
@@ -92,43 +92,43 @@
     const cloud = document.querySelector("#memberCloud");
     const statusElement = document.querySelector("#status");
     let calendars = [];
-    let calendarId = Mini9.selectedCalendarId();
+    let calendarId = Planly.selectedCalendarId();
 
     function renderMembers(calendar) {
       const members = calendar?.members || [];
       document.querySelector("#memberCount").textContent = `· ${members.length}명`;
       cloud.innerHTML = members.length
-        ? members.map((name) => `<span class="member-chip">${Mini9.escapeHtml(name)}</span>`).join("")
+        ? members.map((name) => `<span class="member-chip">${Planly.escapeHtml(name)}</span>`).join("")
         : `<p class="muted small" style="margin:0">표시할 멤버가 없습니다.</p>`;
       document.querySelector("#backLink").href = `calender.html${calendarId ? `?calendarId=${calendarId}` : ""}`;
     }
 
     async function loadCalendars() {
       try {
-        calendars = await Mini9.api("/calendars");
+        calendars = await Planly.api("/calendars");
         if (!calendars.some((item) => String(item.calendarId) === String(calendarId))) {
           calendarId = calendars[0]?.calendarId || "";
         }
         select.innerHTML = calendars.length
           ? calendars.map((item) =>
-              `<option value="${item.calendarId}">${Mini9.escapeHtml(item.name)}</option>`).join("")
+              `<option value="${item.calendarId}">${Planly.escapeHtml(item.name)}</option>`).join("")
           : `<option value="">캘린더 없음</option>`;
         select.value = calendarId;
         renderMembers(calendars.find((item) => String(item.calendarId) === String(calendarId)));
       } catch (error) {
-        Mini9.showStatus(statusElement, error.message, "error");
+        Planly.showStatus(statusElement, error.message, "error");
       }
     }
 
     select.addEventListener("change", () => {
       calendarId = select.value;
-      Mini9.setSelectedCalendarId(calendarId);
+      Planly.setSelectedCalendarId(calendarId);
       renderMembers(calendars.find((item) => String(item.calendarId) === String(calendarId)));
     });
 
     async function changeMember(mode, userId) {
       if (!calendarId) throw new Error("먼저 캘린더를 선택해주세요.");
-      const result = await Mini9.api(`/calendars/${calendarId}/members/${userId}`, {
+      const result = await Planly.api(`/calendars/${calendarId}/members/${userId}`, {
         method: mode === "add" ? "POST" : "DELETE"
       });
       const index = calendars.findIndex((item) => String(item.calendarId) === String(calendarId));
@@ -141,16 +141,16 @@
       try {
         await changeMember("add", document.querySelector("#addUserId").value);
         event.target.reset();
-        Mini9.toast("멤버를 추가했습니다.");
+        Planly.toast("멤버를 추가했습니다.");
       } catch (error) {
-        Mini9.toast(error.message, "error");
+        Planly.toast(error.message, "error");
       }
     });
 
     document.querySelector("#removeForm").addEventListener("submit", async (event) => {
       event.preventDefault();
       const id = document.querySelector("#removeUserId").value;
-      const confirmed = await Mini9.confirmAction({
+      const confirmed = await Planly.confirmAction({
         title: "멤버를 제외할까요?",
         message: `사용자 ID ${id}를 이 캘린더에서 제외합니다.`,
         confirmText: "멤버 제외",
@@ -160,9 +160,9 @@
       try {
         await changeMember("remove", id);
         event.target.reset();
-        Mini9.toast("멤버를 제외했습니다.");
+        Planly.toast("멤버를 제외했습니다.");
       } catch (error) {
-        Mini9.toast(error.message, "error");
+        Planly.toast(error.message, "error");
       }
     });
 

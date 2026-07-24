@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Mini9 할 일">
-  <title>할 일 — Mini9</title>
+  <meta name="description" content="Planly 할 일">
+  <title>할 일 — Planly</title>
   <link rel="stylesheet" href="/users/app.css">
   <script src="/users/app.js"></script>
-  <script>Mini9.requireAuth();</script>
+  <script>Planly.requireAuth();</script>
 </head>
 <body>
   <a class="skip-link" href="#main">본문으로 이동</a>
@@ -131,7 +131,7 @@
     let editingTodoId = null;
 
     function option(value, text) {
-      return `<option value="${value}">${Mini9.escapeHtml(text)}</option>`;
+      return `<option value="${value}">${Planly.escapeHtml(text)}</option>`;
     }
 
     function syncFromUrl() {
@@ -152,7 +152,7 @@
       document.querySelectorAll("#statusFilter button").forEach((button) => {
         button.setAttribute("aria-pressed", String(button.dataset.status === state.completed));
       });
-      const query = Mini9.params({
+      const query = Planly.params({
         page: state.page || "",
         size: state.size === 20 ? "" : state.size,
         completed: state.completed,
@@ -164,8 +164,8 @@
 
     async function loadMeta() {
       const [lists, categories] = await Promise.all([
-        Mini9.api("/api/todo-lists"),
-        Mini9.api("/api/categories")
+        Planly.api("/api/todo-lists"),
+        Planly.api("/api/categories")
       ]);
       state.lists = lists;
       state.categories = categories;
@@ -184,10 +184,10 @@
 
     function deadlineBadge(todo) {
       if (!todo.deadline) return "";
-      if (todo.completed) return `<span class="badge">${Mini9.formatDate(todo.deadline)}</span>`;
+      if (todo.completed) return `<span class="badge">${Planly.formatDate(todo.deadline)}</span>`;
       if (todo.remainingDays < 0) return `<span class="badge badge--red">${Math.abs(todo.remainingDays)}일 지남</span>`;
       if (todo.remainingDays === 0) return `<span class="badge badge--orange">오늘 마감</span>`;
-      return `<span class="badge">${Mini9.formatDate(todo.deadline)}</span>`;
+      return `<span class="badge">${Planly.formatDate(todo.deadline)}</span>`;
     }
 
     function renderTodos(data) {
@@ -211,10 +211,10 @@
                     data-complete="${todo.todoId}" data-value="${!todo.completed}"
                     aria-label="${todo.completed ? "진행 중으로 변경" : "완료로 변경"}">✓</button>
             <div class="list-row__main">
-              <p class="list-row__title">${Mini9.escapeHtml(todo.content)}</p>
+              <p class="list-row__title">${Planly.escapeHtml(todo.content)}</p>
               <div class="list-row__meta">
-                ${todo.listName ? `<span>${Mini9.escapeHtml(todo.listName)}</span>` : "<span>목록 없음</span>"}
-                ${todo.categoryName ? `<span class="badge badge--blue">${Mini9.escapeHtml(todo.categoryName)}</span>` : ""}
+                ${todo.listName ? `<span>${Planly.escapeHtml(todo.listName)}</span>` : "<span>목록 없음</span>"}
+                ${todo.categoryName ? `<span class="badge badge--blue">${Planly.escapeHtml(todo.categoryName)}</span>` : ""}
                 ${deadlineBadge(todo)}
                 ${todo.scheduleId ? `<span class="badge badge--green">일정 연결됨</span>` : ""}
               </div>
@@ -234,24 +234,24 @@
     }
 
     async function loadTodos() {
-      Mini9.showStatus(statusElement, "");
+      Planly.showStatus(statusElement, "");
       syncControls();
       try {
-        const query = Mini9.params({
+        const query = Planly.params({
           page: state.page,
           size: state.size,
           completed: state.completed,
           listId: state.listId,
           categoryId: state.categoryId
         });
-        const data = await Mini9.api("/api/todos?" + query);
+        const data = await Planly.api("/api/todos?" + query);
         if (data.totalPages && state.page >= data.totalPages) {
           state.page = data.totalPages - 1;
           return loadTodos();
         }
         renderTodos(data);
       } catch (error) {
-        Mini9.showStatus(statusElement, error.message, "error");
+        Planly.showStatus(statusElement, error.message, "error");
         todoContent.innerHTML = `<div class="empty"><div>
           <div class="empty__mark">!</div><h3>할 일을 불러오지 못했습니다</h3>
           <p>잠시 후 다시 시도해주세요.</p>
@@ -292,12 +292,12 @@
       if (complete) {
         complete.disabled = true;
         try {
-          await Mini9.api(`/api/todos/${complete.dataset.complete}/completed?completed=${complete.dataset.value}`, {
+          await Planly.api(`/api/todos/${complete.dataset.complete}/completed?completed=${complete.dataset.value}`, {
             method: "PATCH"
           });
           await loadTodos();
         } catch (error) {
-          Mini9.toast(error.message, "error");
+          Planly.toast(error.message, "error");
           complete.disabled = false;
         }
         return;
@@ -311,13 +311,13 @@
         document.querySelector("#editList").value = todo.listId || "";
         document.querySelector("#editCategory").value = todo.categoryId || "";
         document.querySelector("#editDeadline").value = todo.deadline || "";
-        document.querySelector("#editDeadline").min = Mini9.todayValue();
+        document.querySelector("#editDeadline").min = Planly.todayValue();
         editDialog.showModal();
         return;
       }
       const remove = event.target.closest("[data-delete]");
       if (!remove) return;
-      const confirmed = await Mini9.confirmAction({
+      const confirmed = await Planly.confirmAction({
         title: "할 일을 삭제할까요?",
         message: "삭제한 할 일은 복구할 수 없습니다. 연결된 일정이 있다면 함께 삭제될 수 있습니다.",
         confirmText: "할 일 삭제",
@@ -325,11 +325,11 @@
       });
       if (!confirmed) return;
       try {
-        await Mini9.api(`/api/todos/${remove.dataset.delete}`, { method: "DELETE" });
-        Mini9.toast("할 일을 삭제했습니다.");
+        await Planly.api(`/api/todos/${remove.dataset.delete}`, { method: "DELETE" });
+        Planly.toast("할 일을 삭제했습니다.");
         await loadTodos();
       } catch (error) {
-        Mini9.toast(error.message, "error");
+        Planly.toast(error.message, "error");
       }
     });
 
@@ -338,7 +338,7 @@
       event.preventDefault();
       const numberOrNull = (value) => value ? Number(value) : null;
       try {
-        await Mini9.api(`/api/todos/${editingTodoId}`, {
+        await Planly.api(`/api/todos/${editingTodoId}`, {
           method: "PUT",
           body: JSON.stringify({
             listId: numberOrNull(document.querySelector("#editList").value),
@@ -348,16 +348,16 @@
           })
         });
         editDialog.close();
-        Mini9.toast("할 일을 수정했습니다.");
+        Planly.toast("할 일을 수정했습니다.");
         await loadTodos();
       } catch (error) {
-        Mini9.toast(error.message, "error");
+        Planly.toast(error.message, "error");
       }
     });
 
     syncFromUrl();
     loadMeta().then(loadTodos).catch((error) => {
-      Mini9.showStatus(statusElement, error.message, "error");
+      Planly.showStatus(statusElement, error.message, "error");
       loadTodos();
     });
   </script>

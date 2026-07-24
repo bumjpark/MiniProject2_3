@@ -3,16 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Mini9 회원가입">
-  <title>계정 만들기 — Mini9</title>
+  <meta name="description" content="Planly 회원가입">
+  <title>계정 만들기 — Planly</title>
   <link rel="stylesheet" href="/users/app.css">
 </head>
 <body>
   <main class="auth-page">
     <div class="auth-shell">
-      <section class="auth-story" aria-label="Mini9 소개">
+      <section class="auth-story" aria-label="Planly 소개">
         <a class="brand" href="home.html">
-          <span class="brand__mark">M9</span><span>Mini9</span>
+          <span class="brand__mark">P</span><span>Planly</span>
         </a>
         <div>
           <p class="eyebrow" style="color:#2997ff">Start clear</p>
@@ -27,7 +27,7 @@
       <section class="auth-form">
         <div class="auth-form__head">
           <h2>계정 만들기</h2>
-          <p>Mini9을 시작하기 위한 기본 정보를 입력하세요.</p>
+          <p>Planly를 시작하기 위한 기본 정보를 입력하세요.</p>
         </div>
         <div id="status" class="status-strip" role="alert" hidden></div>
         <form id="joinForm">
@@ -65,11 +65,11 @@
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
-      Mini9.showStatus(status, "");
+      Planly.showStatus(status, "");
       button.disabled = true;
       button.textContent = "계정 만드는 중…";
       try {
-        await Mini9.api("/users/signup", {
+        await Planly.api("/users/signup", {
           method: "POST",
           body: JSON.stringify({
             name: form.name.value.trim(),
@@ -77,10 +77,10 @@
             password: form.password.value
           })
         });
-        Mini9.showStatus(status, "계정이 만들어졌습니다. 로그인 화면으로 이동합니다.", "success");
+        Planly.showStatus(status, "계정이 만들어졌습니다. 로그인 화면으로 이동합니다.", "success");
         window.setTimeout(() => location.replace("login.html"), 900);
       } catch (error) {
-        Mini9.showStatus(status, error.message || "계정을 만들지 못했습니다.", "error");
+        Planly.showStatus(status, error.message || "계정을 만들지 못했습니다.", "error");
       } finally {
         button.disabled = false;
         button.textContent = "계정 만들기";

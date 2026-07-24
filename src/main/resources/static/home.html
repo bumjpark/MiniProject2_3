@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="할 일과 일정을 한 흐름으로 정리하는 Mini9">
-  <title>Mini9 — 오늘을 또렷하게</title>
+  <meta name="description" content="할 일과 일정을 한 흐름으로 정리하는 Planly">
+  <title>Planly — 오늘을 또렷하게</title>
   <link rel="stylesheet" href="/users/app.css">
 </head>
 <body>
@@ -17,7 +17,7 @@
       <h1>해야 할 일은 가볍게.<br>하루는 또렷하게.</h1>
       <p class="lead">
         흩어진 할 일과 일정을 한곳에서 정리하세요.
-        Mini9은 필요한 기능만 남겨 오늘 무엇에 집중할지 바로 보여줍니다.
+        Planly는 필요한 기능만 남겨 오늘 무엇에 집중할지 바로 보여줍니다.
       </p>
       <div class="btn-row">
         <a class="btn" id="primaryAction" href="login.html">무료로 시작하기</a>
@@ -26,9 +26,9 @@
     </section>
 
     <section class="page" style="padding-top:0">
-      <div class="product-frame" aria-label="Mini9 화면 미리보기">
+      <div class="product-frame" aria-label="Planly 화면 미리보기">
         <div class="product-frame__bar">
-          <span>Mini9 Workspace</span>
+          <span>Planly Workspace</span>
           <span>오늘, 가장 중요한 것부터</span>
         </div>
         <div class="product-frame__grid">
@@ -84,7 +84,7 @@
 
   <footer class="page" style="padding-top:0">
     <div style="padding-top:24px;border-top:1px solid #d2d2d7;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap">
-      <span class="brand"><span class="brand__mark">M9</span><span>Mini9</span></span>
+      <span class="brand"><span class="brand__mark">P</span><span>Planly</span></span>
       <span class="muted tiny">할 일과 일정을 위한 작은 작업 공간</span>
     </div>
   </footer>
@@ -92,7 +92,7 @@
   <script src="/users/app.js"></script>
   <script>
     document.addEventListener("DOMContentLoaded", () => {
-      if (!Mini9.accessToken()) return;
+      if (!Planly.accessToken()) return;
       const primary = document.querySelector("#primaryAction");
       const secondary = document.querySelector("#secondaryAction");
       primary.href = "todo.html";
