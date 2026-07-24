@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Mini9 일정 관리">
-  <title>일정 — Mini9</title>
+  <meta name="description" content="Planly 일정 관리">
+  <title>일정 — Planly</title>
   <link rel="stylesheet" href="/users/app.css">
   <script src="/users/app.js"></script>
-  <script>Mini9.requireAuth();</script>
+  <script>Planly.requireAuth();</script>
 </head>
 <body>
   <a class="skip-link" href="#main">본문으로 이동</a>
@@ -46,15 +46,13 @@
               <label for="title">일정 제목</label>
               <input class="input" id="title" maxlength="255" placeholder="예: 주간 회의" required>
             </div>
-            <div class="form-grid" style="margin-top:16px">
-              <div class="field">
-                <label for="startDateTime">시작</label>
-                <input class="input" id="startDateTime" type="datetime-local">
-              </div>
-              <div class="field">
-                <label for="endDateTime">종료</label>
-                <input class="input" id="endDateTime" type="datetime-local">
-              </div>
+            <div class="field" style="margin-top:16px">
+              <label for="startDateTime">시작</label>
+              <input class="input" id="startDateTime" type="datetime-local">
+            </div>
+            <div class="field" style="margin-top:16px">
+              <label for="endDateTime">종료</label>
+              <input class="input" id="endDateTime" type="datetime-local">
             </div>
             <div class="field" style="margin-top:16px">
               <label for="label">색상 라벨</label>
@@ -100,7 +98,7 @@
     const form = document.querySelector("#scheduleForm");
     const state = {
       calendars: [],
-      calendarId: Mini9.selectedCalendarId(),
+      calendarId: Planly.selectedCalendarId(),
       schedules: [],
       editingId: null
     };
@@ -123,8 +121,8 @@
     function editSchedule(schedule) {
       state.editingId = schedule.scheduleId;
       document.querySelector("#title").value = schedule.title;
-      document.querySelector("#startDateTime").value = Mini9.localDateTimeValue(schedule.startDateTime);
-      document.querySelector("#endDateTime").value = Mini9.localDateTimeValue(schedule.endDateTime);
+      document.querySelector("#startDateTime").value = Planly.localDateTimeValue(schedule.startDateTime);
+      document.querySelector("#endDateTime").value = Planly.localDateTimeValue(schedule.endDateTime);
       document.querySelector("#label").value = schedule.label || "";
       document.querySelector("#formEyebrow").textContent = "Edit schedule";
       document.querySelector("#formTitle").textContent = "일정 수정";
@@ -161,13 +159,13 @@
       content.innerHTML = `<ul class="list">${sorted.map((schedule) => `
         <li class="list-row">
           <span class="badge badge--blue" style="min-width:46px;justify-content:center">
-            ${Mini9.escapeHtml(schedule.label || "NONE")}
+            ${Planly.escapeHtml(schedule.label || "NONE")}
           </span>
           <div class="list-row__main">
-            <p class="list-row__title">${Mini9.escapeHtml(schedule.title)}</p>
+            <p class="list-row__title">${Planly.escapeHtml(schedule.title)}</p>
             <div class="list-row__meta">
-              <span>${Mini9.formatDateTime(schedule.startDateTime)}</span>
-              <span>→ ${Mini9.formatDateTime(schedule.endDateTime)}</span>
+              <span>${Planly.formatDateTime(schedule.startDateTime)}</span>
+              <span>→ ${Planly.formatDateTime(schedule.endDateTime)}</span>
             </div>
           </div>
           <div class="list-row__actions">
@@ -186,7 +184,7 @@
         return;
       }
       try {
-        state.schedules = await Mini9.api(`/calendars/${state.calendarId}/schedules`);
+        state.schedules = await Planly.api(`/calendars/${state.calendarId}/schedules`);
         renderSchedules();
         const requestedId = new URLSearchParams(location.search).get("scheduleId");
         if (requestedId && !state.editingId) {
@@ -194,30 +192,30 @@
           if (schedule) editSchedule(schedule);
         }
       } catch (error) {
-        Mini9.showStatus(statusElement, error.message, "error");
+        Planly.showStatus(statusElement, error.message, "error");
       }
     }
 
     async function loadCalendars() {
       try {
-        state.calendars = await Mini9.api("/calendars");
+        state.calendars = await Planly.api("/calendars");
         if (!state.calendars.some((item) => String(item.calendarId) === String(state.calendarId))) {
           state.calendarId = state.calendars[0]?.calendarId || "";
         }
         select.innerHTML = state.calendars.length
           ? state.calendars.map((item) =>
-              `<option value="${item.calendarId}">${Mini9.escapeHtml(item.name)}</option>`).join("")
+              `<option value="${item.calendarId}">${Planly.escapeHtml(item.name)}</option>`).join("")
           : `<option value="">캘린더 없음</option>`;
         select.value = state.calendarId;
         await loadSchedules();
       } catch (error) {
-        Mini9.showStatus(statusElement, error.message, "error");
+        Planly.showStatus(statusElement, error.message, "error");
       }
     }
 
     select.addEventListener("change", () => {
       state.calendarId = select.value;
-      Mini9.setSelectedCalendarId(state.calendarId);
+      Planly.setSelectedCalendarId(state.calendarId);
       resetForm();
       loadSchedules();
     });
@@ -225,19 +223,19 @@
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       if (!state.calendarId) {
-        Mini9.toast("먼저 캘린더를 만들어주세요.", "error");
+        Planly.toast("먼저 캘린더를 만들어주세요.", "error");
         return;
       }
       const start = document.querySelector("#startDateTime").value || null;
       const end = document.querySelector("#endDateTime").value || null;
       if (start && end && new Date(end) < new Date(start)) {
-        Mini9.toast("종료 시각은 시작 시각보다 빠를 수 없습니다.", "error");
+        Planly.toast("종료 시각은 시작 시각보다 빠를 수 없습니다.", "error");
         return;
       }
       const button = document.querySelector("#submitButton");
       button.disabled = true;
       try {
-        await Mini9.api(
+        await Planly.api(
           `/calendars/${state.calendarId}/schedules${state.editingId ? `/${state.editingId}` : ""}`,
           {
             method: state.editingId ? "PUT" : "POST",
@@ -249,11 +247,11 @@
             })
           }
         );
-        Mini9.toast(state.editingId ? "일정을 수정했습니다." : "일정을 추가했습니다.");
+        Planly.toast(state.editingId ? "일정을 수정했습니다." : "일정을 추가했습니다.");
         resetForm();
         await loadSchedules();
       } catch (error) {
-        Mini9.toast(error.message, "error");
+        Planly.toast(error.message, "error");
       } finally {
         button.disabled = false;
       }
@@ -268,7 +266,7 @@
       }
       const remove = event.target.closest("[data-delete]");
       if (!remove) return;
-      const confirmed = await Mini9.confirmAction({
+      const confirmed = await Planly.confirmAction({
         title: "일정을 삭제할까요?",
         message: "일정은 삭제되지만 연결된 할 일은 유지되며 일정 연결만 해제됩니다.",
         confirmText: "일정 삭제",
@@ -276,14 +274,14 @@
       });
       if (!confirmed) return;
       try {
-        await Mini9.api(`/calendars/${state.calendarId}/schedules/${remove.dataset.delete}`, {
+        await Planly.api(`/calendars/${state.calendarId}/schedules/${remove.dataset.delete}`, {
           method: "DELETE"
         });
         if (String(state.editingId) === remove.dataset.delete) resetForm();
-        Mini9.toast("일정을 삭제했습니다.");
+        Planly.toast("일정을 삭제했습니다.");
         await loadSchedules();
       } catch (error) {
-        Mini9.toast(error.message, "error");
+        Planly.toast(error.message, "error");
       }
     });
 
