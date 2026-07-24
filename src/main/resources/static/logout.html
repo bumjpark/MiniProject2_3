@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Plainly 로그아웃">
-  <title>로그아웃 — Plainly</title>
+  <meta name="description" content="Planly 로그아웃">
+  <title>로그아웃 — Planly</title>
   <link rel="stylesheet" href="/users/app.css">
 </head>
 <body>
@@ -29,16 +29,16 @@
 
   <script src="/users/app.js"></script>
   <script>
-    document.querySelector("#backLink").href = Mini9.accessToken() ? "todo.html" : "home.html";
+    document.querySelector("#backLink").href = Planly.accessToken() ? "todo.html" : "home.html";
     const button = document.querySelector("#logoutButton");
-    if (!Mini9.accessToken()) {
+    if (!Planly.accessToken()) {
       button.textContent = "홈으로 이동";
       button.addEventListener("click", () => location.replace("home.html"));
     } else {
       button.addEventListener("click", async () => {
         button.disabled = true;
         button.textContent = "로그아웃 중…";
-        await Mini9.logout();
+        await Planly.logout();
       });
     }
   </script>

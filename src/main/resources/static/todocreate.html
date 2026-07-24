@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Mini9 새 할 일 만들기">
-  <title>새 할 일 — Mini9</title>
+  <meta name="description" content="Planly 새 할 일 만들기">
+  <title>새 할 일 — Planly</title>
   <link rel="stylesheet" href="/users/app.css">
   <script src="/users/app.js"></script>
-  <script>Mini9.requireAuth();</script>
+  <script>Planly.requireAuth();</script>
 </head>
 <body>
   <a class="skip-link" href="#main">본문으로 이동</a>
@@ -102,18 +102,18 @@
     const form = document.querySelector("#todoForm");
     const status = document.querySelector("#status");
     const categoryDialog = document.querySelector("#categoryDialog");
-    document.querySelector("#deadline").min = Mini9.todayValue();
+    document.querySelector("#deadline").min = Planly.todayValue();
 
     function option(value, text) {
-      return `<option value="${value}">${Mini9.escapeHtml(text)}</option>`;
+      return `<option value="${value}">${Planly.escapeHtml(text)}</option>`;
     }
 
     async function loadOptions() {
       try {
         const [lists, categories, calendars] = await Promise.all([
-          Mini9.api("/api/todo-lists"),
-          Mini9.api("/api/categories"),
-          Mini9.api("/calendars")
+          Planly.api("/api/todo-lists"),
+          Planly.api("/api/categories"),
+          Planly.api("/calendars")
         ]);
         document.querySelector("#listId").insertAdjacentHTML(
           "beforeend", lists.map((item) => option(item.listId, item.listName)).join("")
@@ -127,7 +127,7 @@
         const initialList = new URLSearchParams(location.search).get("listId");
         if (initialList) document.querySelector("#listId").value = initialList;
       } catch (error) {
-        Mini9.showStatus(status, "선택 항목 일부를 불러오지 못했습니다. " + error.message, "error");
+        Planly.showStatus(status, "선택 항목 일부를 불러오지 못했습니다. " + error.message, "error");
       }
     }
 
@@ -140,10 +140,10 @@
       const button = document.querySelector("#submitButton");
       button.disabled = true;
       button.textContent = "추가 중…";
-      Mini9.showStatus(status, "");
+      Planly.showStatus(status, "");
       const valueOrNull = (value) => value ? Number(value) : null;
       try {
-        await Mini9.api("/api/todos", {
+        await Planly.api("/api/todos", {
           method: "POST",
           body: JSON.stringify({
             listId: valueOrNull(form.listId.value),
@@ -153,10 +153,10 @@
             calendarId: valueOrNull(form.calendarId.value)
           })
         });
-        Mini9.toast("할 일을 추가했습니다.");
+        Planly.toast("할 일을 추가했습니다.");
         location.replace("todo.html");
       } catch (error) {
-        Mini9.showStatus(status, error.message, "error");
+        Planly.showStatus(status, error.message, "error");
       } finally {
         button.disabled = false;
         button.textContent = "할 일 추가";
@@ -168,7 +168,7 @@
     document.querySelector("#categoryForm").addEventListener("submit", async (event) => {
       event.preventDefault();
       try {
-        const created = await Mini9.api("/api/categories", {
+        const created = await Planly.api("/api/categories", {
           method: "POST",
           body: JSON.stringify({ categoryName: document.querySelector("#categoryName").value.trim() })
         });
@@ -178,9 +178,9 @@
         document.querySelector("#categoryId").value = created.categoryId;
         categoryDialog.close();
         event.target.reset();
-        Mini9.toast("카테고리를 추가했습니다.");
+        Planly.toast("카테고리를 추가했습니다.");
       } catch (error) {
-        Mini9.toast(error.message, "error");
+        Planly.toast(error.message, "error");
       }
     });
 

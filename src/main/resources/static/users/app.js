@@ -1,9 +1,25 @@
 (function () {
   "use strict";
 
-  const ACCESS_KEY = "mini9.accessToken";
-  const REFRESH_KEY = "mini9.refreshToken";
-  const CALENDAR_KEY = "mini9.calendarId";
+  const STORAGE_PREFIX = "planly.";
+  const LEGACY_STORAGE_PREFIX = ["mini", "9."].join("");
+  const ACCESS_KEY = STORAGE_PREFIX + "accessToken";
+  const REFRESH_KEY = STORAGE_PREFIX + "refreshToken";
+  const CALENDAR_KEY = STORAGE_PREFIX + "calendarId";
+
+  function migrateLegacyStorage() {
+    ["accessToken", "refreshToken", "calendarId"].forEach((name) => {
+      const legacyKey = LEGACY_STORAGE_PREFIX + name;
+      const currentKey = STORAGE_PREFIX + name;
+      const legacyValue = localStorage.getItem(legacyKey);
+      if (!localStorage.getItem(currentKey) && legacyValue) {
+        localStorage.setItem(currentKey, legacyValue);
+      }
+      localStorage.removeItem(legacyKey);
+    });
+  }
+
+  migrateLegacyStorage();
   const REFRESH_MARGIN_MS = 30 * 1000;
   let refreshRequest = null;
 
@@ -327,48 +343,41 @@
   }
 
   function renderHeader() {
-    const mount = document.querySelector("[data-site-header]");
-    if (!mount) return;
-
-    const user = currentIdentity();
-    const isAuth = Boolean(accessToken());
-
-    mount.innerHTML = `
+    const target = document.querySelector("[data-site-header]");
+    if (!target) return;
+    const loggedIn = Boolean(accessToken() || refreshToken());
+    const page = activePage();
+    const navItems = [
+      ["todo.html", "할 일"],
+      ["todolist.html", "목록"],
+      ["calender.html", "캘린더"],
+      ["scadule.html", "일정"],
+    ];
+    const links = navItems
+      .map(
+        ([href, label]) =>
+          `<a href="${href}" ${page === href ? 'aria-current="page"' : ""}>${label}</a>`
+      )
+      .join("");
+    target.innerHTML = `
       <header class="site-header">
         <div class="site-header__inner">
-          <a class="brand" href="home.html">
-            <span class="brand__mark">PL</span><span>Plainly</span>
+          <a class="brand" href="home.html" aria-label="Planly 홈">
+            <span class="brand__mark">P</span><span>Planly</span>
           </a>
-          <nav class="site-nav">
+          ${loggedIn ? `<nav class="site-nav" aria-label="주요 메뉴">${links}</nav>` : ""}
+          <div class="site-header__actions">
             ${
-              isAuth
-                ? `
-                  <a class="site-nav__link" href="todo.html">할 일</a>
-                  <a class="site-nav__link" href="calender.html">공유 캘린더</a>
-                  <a class="site-nav__link" href="todolist.html">목록 관리</a>
-                  <a class="site-nav__link" href="calendermembermanage.html">멤버 관리</a>
-                `
-                : `
-                  <a class="site-nav__link" href="home.html">소개</a>
-                `
-            }
-          </nav>
-          <div class="user-strip">
-            ${
-              isAuth
-                ? `
-                  <span class="user-badge" title="${escapeHtml(user.email)}">${escapeHtml(user.name)}</span>
-                  <a class="btn btn--ghost" href="logout.html">로그아웃</a>
-                `
-                : `
-                  <a class="btn btn--ghost" href="login.html">로그인</a>
-                  <a class="btn btn--outline" href="join.html">계정 만들기</a>
-                `
+              loggedIn
+                ? `<span class="session-label">${escapeHtml(currentIdentity())}</span>
+                   <a class="btn btn--compact btn--quiet" href="logout.html">로그아웃</a>`
+                : `<a class="btn btn--compact btn--text" href="login.html">로그인</a>
+                   <a class="btn btn--compact" href="join.html">시작하기</a>`
             }
           </div>
         </div>
-      </header>
-    `;
+        ${loggedIn ? `<nav class="mobile-nav" aria-label="모바일 메뉴">${links}</nav>` : ""}
+      </header>`;
   }
 
   function selectedCalendarId() {
@@ -393,7 +402,7 @@
 
   document.addEventListener("DOMContentLoaded", renderHeader);
 
-  window.Mini9 = {
+  window.Planly = {
     accessToken,
     api,
     clearTokens,

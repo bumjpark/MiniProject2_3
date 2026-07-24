@@ -3,16 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Plainly 로그인">
-  <title>로그인 — Plainly</title>
+  <meta name="description" content="Planly 로그인">
+  <title>로그인 — Planly</title>
   <link rel="stylesheet" href="/users/app.css">
 </head>
 <body>
   <main class="auth-page">
     <div class="auth-shell">
-      <section class="auth-story" aria-label="Plainly 소개">
+      <section class="auth-story" aria-label="Planly 소개">
         <a class="brand" href="home.html">
-          <span class="brand__mark">PL</span><span>Plainly</span>
+          <span class="brand__mark">P</span><span>Planly</span>
         </a>
         <div>
           <p class="eyebrow" style="color:#2997ff">Welcome back</p>
@@ -27,7 +27,7 @@
       <section class="auth-form">
         <div class="auth-form__head">
           <h2>로그인</h2>
-          <p>Plainly 작업 공간으로 돌아오세요.</p>
+          <p>Planly 작업 공간으로 돌아오세요.</p>
         </div>
         <div id="status" class="status-strip status-strip--error" role="alert" hidden></div>
         <form id="loginForm">
@@ -57,29 +57,29 @@
     const button = document.querySelector("#submitButton");
     const status = document.querySelector("#status");
 
-    if (Mini9.accessToken()) {
-      const next = Mini9.safeNext(new URLSearchParams(location.search).get("next"));
+    if (Planly.accessToken()) {
+      const next = Planly.safeNext(new URLSearchParams(location.search).get("next"));
       location.replace(next);
     }
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
-      Mini9.showStatus(status, "");
+      Planly.showStatus(status, "");
       button.disabled = true;
       button.textContent = "확인 중…";
       try {
-        const result = await Mini9.api("/users/login", {
+        const result = await Planly.api("/users/login", {
           method: "POST",
           body: JSON.stringify({
             email: form.email.value.trim(),
             password: form.password.value
           })
         });
-        Mini9.setTokens(result.token, result.refreshToken);
-        const next = Mini9.safeNext(new URLSearchParams(location.search).get("next"));
+        Planly.setTokens(result.token, result.refreshToken);
+        const next = Planly.safeNext(new URLSearchParams(location.search).get("next"));
         location.replace(next);
       } catch (error) {
-        Mini9.showStatus(status, error.message || "이메일 또는 비밀번호를 확인해주세요.", "error");
+        Planly.showStatus(status, error.message || "이메일 또는 비밀번호를 확인해주세요.", "error");
       } finally {
         button.disabled = false;
         button.textContent = "로그인";
